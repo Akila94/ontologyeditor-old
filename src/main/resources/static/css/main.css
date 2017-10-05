@@ -1,0 +1,83 @@
+.node {
+    cursor: pointer;
+}
+
+.node:hover {
+    stroke: #000;
+    stroke-width: 1.5px;
+}
+
+.node--leaf {
+    fill: white;
+}
+
+.label {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    text-anchor: middle;
+    text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 -1px 0 #fff;
+}
+
+.label,
+.node--root,
+/*.node--leaf {*/
+    /*pointer-events: none;*/
+/*}*/
+div.tooltip {
+    position: absolute;
+    text-align: center;
+    height: 28px;
+    padding: 2px;
+    color: white;
+    font: 12px sans-serif;
+    background: black;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+svg{
+    background: #ffffff;
+    float: right;
+    clear: right;
+}
+.autocomplete-suggestions { border: 1px solid #999; background: #FFF; overflow: auto; }
+.autocomplete-suggestion { padding: 2px 5px; white-space: nowrap; overflow: hidden; }
+.autocomplete-selected { background: #F0F0F0; }
+.autocomplete-suggestions strong { font-weight: normal; color: #3399FF; }
+.autocomplete-group { padding: 2px 5px; }
+.autocomplete-group strong { display: block; border-bottom: 1px solid #000; }
+.add-on .input-group-btn > .btn {
+    border-left-width:0;left:-2px;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+}
+/* stop the glowing blue shadow */
+.add-on .form-control:focus {
+    box-shadow:none;
+    -webkit-box-shadow:none;
+    border-color:#cccccc;
+}
+#addBtn{
+    margin-left: 15px;
+}
+
+.col-fixed-240{
+    width:240px;
+    position:fixed;
+    height:100%;
+    z-index:1;
+}
+.glyphicon-plus-sign{
+    color: white;
+    font-size: 30px;
+    margin-top: -6px;
+
+}
+.glyphicon-remove-circle{
+    color: red;
+    font-size: 30px;
+    margin-top: -12px;
+}
+
+li form{
+    display: inline;
+}
