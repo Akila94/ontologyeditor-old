@@ -16,6 +16,8 @@ public class Pattern {
     private List<String> literals;
     private int cardinality;
     private String cardinalityType; // min max exact
+    private String description;
+    private String author;
     public Pattern() {
     }
 
@@ -99,15 +101,36 @@ public class Pattern {
         this.cardinalityType = cardinalityType;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
     @Override
     public String toString() {
         return "Pattern{" +
                 "currentClass='" + currentClass + '\'' +
+                ", patternType='" + patternType + '\'' +
                 ", classList=" + classList +
                 ", oProperties=" + oProperties +
                 ", dProperties=" + dProperties +
                 ", dTypes=" + dTypes +
                 ", individuals=" + individuals +
+                ", literals=" + literals +
+                ", cardinality=" + cardinality +
+                ", cardinalityType='" + cardinalityType + '\'' +
+                ", description='" + description + '\'' +
                 '}';
     }
 }

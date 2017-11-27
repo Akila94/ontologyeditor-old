@@ -5,73 +5,39 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="css/main.css"/>
+    <link rel="stylesheet" href="css/jqtree.css"/>
     <link href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" rel="Stylesheet"/>
 </head>
 <body>
     <div th:replace="fragments/header :: header"/>
+
+
     <div class="container-fluid">
         <div class="row">
-            <!--<div class="col-12">-->
-                <!--<svg width="575" height="575"></svg>-->
-            <!--</div>-->
-            <div class="col-fixed-240 align-self-center">
-                <button type="button" class="btn btn-info btn-md" data-toggle="modal" data-target="#addModel" id="addBtn">Add a new Class</button>
-                <form action="#" id="search-form" th:action="@{/classDetail}" th:object="${oClass}" method="get" name="addForm" class="navbar-form ">
-                    <div class="input-group add-on">
-                        <div class="form-group">
-                            <input type="text"  th:field="*{className}" id="w-input-search" individual="" autocomplete="on" class="form-control" required="true" placeholder="Enter a Class Name"/>
-                        </div>
-                        <div class="input-group-btn">
-                            <button type="submit" id="searchBtn" class="btn  btn-info btn-block"><i class="glyphicon glyphicon-search"></i></button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <div class="modal fade" id="addModel">
-            <div class="modal-dialog">
+            <div class="col-sm-4 tree well well-sm">
+                <div class="row">
 
-                <!-- Modal content-->
-                <div class="modal-content">
-                    <div class="modal-header" style="padding:35px 50px;">
-                        <button type="button" data-dismiss="modal" class="close">&times;</button>
-                        <h4><span class="glyphicon glyphicon-lock"></span> Add New Class</h4>
-                    </div>
-                    <div class="modal-body" style="padding:40px 50px;">
-                        <form action="#" id="add-form" th:action="@{/view}" th:object="${newClass}" method="post" name="addForm">
-                            <div class="form-group">
-                                <label>Name</label>
-                                <input type="text" th:field="*{name}" class="form-control" />
+                    <div class="col-sm-2">
+                        <form action="#" id="search-form" th:action="@{/classDetail}" th:object="${oClass}" method="get" name="addForm" class="navbar-form ">
+                            <div class="input-group add-on">
+                                <div class="form-group">
+                                    <input type="text"  th:field="*{className}" id="w-input-search" individual="" autocomplete="on" class="form-control" required="true" placeholder="Enter a Class Name"/>
+                                </div>
+                                <div class="input-group-btn">
+                                    <button type="submit" id="searchBtn" class="btn  btn-info btn-block"><i class="glyphicon glyphicon-search"></i></button>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Parent</label>
-                                <select th:field="*{parent}" class="form-control">
-                                    <option th:each="string : ${classList}"
-                                            th:individual="${string}"
-                                            th:text="${string}"
-                                            value="">Wireframe
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Comments</label>
-                                <textarea class="form-control" rows="5" id="comment"  th:field="*{comment}"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <button type="submit" id="submitBtn" class="btn btn-success btn-block"> Submit </button>
-                            </div>
-
                         </form>
-                        <hr/>
-                        <div id="errorMsg"><script>${error}</script></div>
                     </div>
                 </div>
+                <h4>Class Hierarchy</h4>
+                <div id="class-tree"></div>
             </div>
+
         </div>
 
+
     </div>
-
-
 
     <!--<script  th:inline="javascript">-->
         <!--/*<![CDATA[*/-->
@@ -84,39 +50,58 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <!--<script type="text/javascript" src="js/circularPacking.js"></script>-->
     <script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js" ></script>
-
-
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.3.3/themes/default/style.min.css" />
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.3.3/jstree.min.js"></script>
+    <script  th:inline="javascript">
+        /*<![CDATA[*/
+        var data = JSON.parse([[${tree}]]);
+        var dataO = JSON.parse([[${treeO}]]);
+        var dataD = JSON.parse([[${treeD}]]);
+        /*]]>*/
+    </script>
 <script type="text/javascript">
-    $('#add-form').on('submit', function(event){
-
-        var self = this;
-        var form = $(this);
-        var errorMsg = $('#errorMsg');
-
-
-        if (form.data('requestRunning')) {
-            return;
-        }
-
-        form.data('requestRunning', true);
-        event.preventDefault();
-        $.ajax({
-            url: form.attr("action"),
-            type: form.attr("method"),
-            data: form.serialize(),
-            success: function(result){
-                    errorMsg.text(result).addClass("alert alert-danger");
-
-            },
-            complete: function (e) {
-                form.data('requestRunning', false);
-            }
-
-        });
-
-    });
-
     $(document).ready(function() {
+        $('#search-form').on('submit', function(event){
+            var self = this;
+            var form = $(this);
+            if (form.data('requestRunning')) {
+                return;
+            }
+            form.data('requestRunning', true);
+            event.preventDefault();
+            $.ajax({
+                url: form.attr("action"),
+                type: form.attr("method"),
+                data: form.serialize(),
+                success: function(result){
+                    location.reload(true);
+                },
+                complete: function (e) {
+                    form.data('requestRunning', false);
+                }
+            });
+        });
+        $('#add-form').on('submit', function(event){
+            var self = this;
+            var form = $(this);
+            var errorMsg = $('#errorMsg');
+            if (form.data('requestRunning')) {
+                return;
+            }
+            form.data('requestRunning', true);
+            event.preventDefault();
+            $.ajax({
+                url: form.attr("action"),
+                type: form.attr("method"),
+                data: form.serialize(),
+                success: function(result){
+                    errorMsg.text(result).addClass("alert alert-danger");
+                },
+                complete: function (e) {
+                    form.data('requestRunning', false);
+                }
+            });
+        });
         $("#w-input-search").autocomplete({
             minLength: 1,
             delay: 500,
@@ -141,8 +126,9 @@
                 $("#customer-search").val(ui.item.label);
             }
         });
-    });
 
+       
+    });
 </script>
 
 </body>

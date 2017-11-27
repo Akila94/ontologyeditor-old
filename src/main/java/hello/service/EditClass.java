@@ -1,55 +1,48 @@
 package hello.service;
 
-import com.clarkparsia.owlapi.explanation.DefaultExplanationGenerator;
-import com.clarkparsia.owlapi.explanation.util.SilentExplanationProgressMonitor;
-import hello.bean.Pattern;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import hello.bean.ClassAxiom;
+import hello.bean.Pattern;
 import hello.bean.TreeNode;
+import hello.util.Init;
 import hello.util.UtilMethods;
 import hello.util.Variables;
-import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer;
 import org.semanticweb.owlapi.io.OWLObjectRenderer;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
-import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrderer;
-import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrdererImpl;
-import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationTree;
+import org.semanticweb.owlapi.search.EntitySearcher;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 
-import static hello.util.UtilMethods.*;
+import static hello.util.UtilMethods.checkConsistency;
+import static hello.util.UtilMethods.searchTree;
 
 /**
  * Created by Lotus on 8/16/2017.
  */
-
+@Service
 public class EditClass {
 
-    private final OWLReasonerFactory reasonerFactory;
-    private final OWLOntology ontology;
-    private final OWLReasoner reasoner;
     private TreeNode classTree = null;
 
-    public EditClass(OWLReasonerFactory reasonerFactory, OWLOntology ontology) {
-        this.reasonerFactory = reasonerFactory;
-        this.ontology = ontology;
-        this.reasoner = reasonerFactory.createNonBufferingReasoner(ontology);
 
+
+    public EditClass() {
     }
 
+
     public TreeNode printHierarchy(OWLClass clazz) throws OWLException {
-        OWLReasoner reasoner = reasonerFactory.createNonBufferingReasoner(ontology);
-        printHierarchy(reasoner, clazz, 0);
-        for (OWLClass cl : ontology.getClassesInSignature()) {
-            if (!reasoner.isSatisfiable(cl)) {
+        printHierarchy(Init.getReasoner(Variables.STRUCTURAL), clazz, 0);
+        for (OWLClass cl : Init.getOntology().getClassesInSignature()) {
+            if (!Init.getReasoner(Variables.STRUCTURAL).isSatisfiable(cl)) {
                 //  System.out.println("XXX: " + cl.getIRI().toString());
             }
         }
         return classTree;
      }
-
     private void printHierarchy(OWLReasoner reasoner, OWLClass clazz, int level)
             throws OWLException {
         if (reasoner.isSatisfiable(clazz)) {
@@ -69,11 +62,29 @@ public class EditClass {
         }
     }
 
+    List<OWLClass> clzes;
+    private List<OWLClass> printHierarchy(OWLReasoner reasoner, OWLClass clazz)
+            throws OWLException {
+
+        if (reasoner.isSatisfiable(clazz)) {
+            clzes.add(clazz);
+
+            for (OWLClass child : reasoner.getSubClasses(clazz, true).getFlattened()) {
+                if (reasoner.isSatisfiable(child)) {
+                    if (!child.equals(clazz)) {
+                        printHierarchy(reasoner, child);
+                    }
+                }
+            }
+        }
+        return  clzes;
+    }
+
     public List<String> getAllClasses(){
         List<String> classList = new ArrayList<>();
 
 
-        Set<OWLClass> classes = ontology.getClassesInSignature();
+        Set<OWLClass> classes = Init.getOntology().getClassesInSignature();
         for(OWLClass owlClass:classes){
             classList.add(owlClass.getIRI().getShortForm());
         }
@@ -85,7 +96,7 @@ public class EditClass {
         List<String> propertyList = new ArrayList<>();
 
 
-        Set<OWLObjectProperty> properties = ontology.getObjectPropertiesInSignature();
+        Set<OWLObjectProperty> properties = Init.getOntology().getObjectPropertiesInSignature();
         for(OWLObjectProperty p:properties){
             propertyList.add(p.getIRI().getShortForm());
         }
@@ -94,7 +105,7 @@ public class EditClass {
     }
     public List<String> getAllDataProperties(){
         List<String> propertyList = new ArrayList<>();
-        Set<OWLDataProperty> properties = ontology.getDataPropertiesInSignature();
+        Set<OWLDataProperty> properties = Init.getOntology().getDataPropertiesInSignature();
         for(OWLDataProperty p:properties){
             propertyList.add(p.getIRI().getShortForm());
         }
@@ -103,7 +114,7 @@ public class EditClass {
     }
     public List<String> getAllIndividuals(){
         List<String> individuals = new ArrayList<>();
-        Set<OWLNamedIndividual> properties = ontology.getIndividualsInSignature();
+        Set<OWLNamedIndividual> properties = Init.getOntology().getIndividualsInSignature();
         for(OWLNamedIndividual i:properties){
             individuals.add(i.getIRI().getShortForm());
         }
@@ -112,7 +123,7 @@ public class EditClass {
     }
     public List<String> getAllDataTypes(){
         List<String> dTypes = new ArrayList<>();
-        Set<OWLDatatype> properties = ontology.getDatatypesInSignature();
+        Set<OWLDatatype> properties = Init.getOntology().getDatatypesInSignature();
         for(OWLDatatype t:properties){
             dTypes.add(t.getIRI().getShortForm());
         }
@@ -120,246 +131,201 @@ public class EditClass {
         return dTypes;
     }
 
+
     public String addClass(String className) throws OWLOntologyStorageException, OWLOntologyCreationException {
-        OWLOntologyManager man = OWLManager.createOWLOntologyManager();
-        OWLOntology ontology = loadOntology(man);
-        OWLDataFactory df = OWLManager.getOWLDataFactory();
 
-        OWLEntity entity = df.getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI, className));
-        OWLAxiom declare = df.getOWLDeclarationAxiom(entity);
+        OWLEntity entity = Init.getFactory().getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI, className));
+        OWLAxiom declare = Init.getFactory().getOWLDeclarationAxiom(entity);
 
-        man.addAxiom(ontology, declare);
-
-        String reason = checkConsistency(ontology, man);
-
-        if (UtilMethods.consistent == 0) {
-            man.removeAxiom(ontology, declare);
-        }
-        man.saveOntology(ontology);
-        System.out.println(reason);
-        return reason;
+        return UtilMethods.addAxiom(declare);
     }
 
+    public void deleteClass(OWLClass owlClass) throws OWLOntologyStorageException, OWLOntologyCreationException
+    {
 
+        Set<OWLAxiom> toRemove = new HashSet<>();
+        for (OWLAxiom select : Init.getOntology().getAxioms())
+        {
+            if(select.getSignature().contains(owlClass))
+            {
+                toRemove.add(select);
+            }
+        }
+
+        UtilMethods.axiomsQueue = new ArrayList<>();
+        UtilMethods.axiomsQueue.addAll(toRemove);
+        UtilMethods.removedInstances = Init.getReasoner(Variables.Pellet).getInstances(owlClass,true).getFlattened();
+
+
+        UtilMethods.removedAnnotations = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(owlClass, Init.getOntology());
+
+        Init.getManager().removeAxioms(Init.getOntology(), toRemove);
+        Init.getManager().saveOntology(Init.getOntology());
+    }
 
     public String addSubClass(Pattern ptrn) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        OWLOntologyManager man = OWLManager.createOWLOntologyManager();
-        OWLOntology ontology = loadOntology(man);
-        OWLDataFactory df = OWLManager.getOWLDataFactory();
-        AddAxiom addAxiom;
+
         OWLAxiom axiom = null;
-
-
-        OWLClass childC = df.getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI,ptrn.getCurrentClass() ));
+        OWLClass childC = Init.getFactory().getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI,ptrn.getCurrentClass() ));
 
         //a is sub class of b
         if(ptrn.getPatternType().equals("sp1")){
-            if(ptrn.getClassList().get(0).equals("Thing")){
-                addClass(ptrn.getClassList().get(0));
-            }else{
-                OWLClass parentC = df.getOWLClass(IRI.create(Variables.baseIRI, ptrn.getClassList().get(0)));
-                axiom = df.getOWLSubClassOfAxiom(childC, parentC);
-            }
+            OWLClass parentC = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI, ptrn.getClassList().get(0)));
+            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, parentC);
 
         }else if(ptrn.getPatternType().equals("sp2")){
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            OWLClass individual = df.getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
-            OWLObjectSomeValuesFrom someValuesFrom= df.getOWLObjectSomeValuesFrom(property,individual);
-            axiom = df.getOWLSubClassOfAxiom(childC,someValuesFrom);
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLClass individual = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
+            OWLObjectSomeValuesFrom someValuesFrom= Init.getFactory().getOWLObjectSomeValuesFrom(property,individual);
+            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,someValuesFrom);
         }else if(ptrn.getPatternType().equals("sp3")){
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
             Set<OWLClass> owlClasses = new HashSet<>();
             for(String s:ptrn.getClassList()){
-                owlClasses.add(df.getOWLClass(IRI.create(Variables.baseIRI+s)));
+                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
             }
 
-            OWLObjectUnionOf unionOf = df.getOWLObjectUnionOf(owlClasses);
+            OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
 
-            OWLObjectAllValuesFrom allValuesFrom =df.getOWLObjectAllValuesFrom(property,unionOf);
-            axiom = df.getOWLSubClassOfAxiom(childC,allValuesFrom);
+            OWLObjectAllValuesFrom allValuesFrom =Init.getFactory().getOWLObjectAllValuesFrom(property,unionOf);
+            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,allValuesFrom);
         }else if(ptrn.getPatternType().equals("sp4")){
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            OWLIndividual individual = df.getOWLNamedIndividual(IRI.create(Variables.baseIRI+ptrn.getIndividuals().get(0)));
-            OWLObjectHasValue hasValue= df.getOWLObjectHasValue(property,individual);
-            axiom = df.getOWLSubClassOfAxiom(childC,hasValue);
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLIndividual individual = Init.getFactory().getOWLNamedIndividual(IRI.create(Variables.baseIRI+ptrn.getIndividuals().get(0)));
+            OWLObjectHasValue hasValue= Init.getFactory().getOWLObjectHasValue(property,individual);
+            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,hasValue);
         }else if(ptrn.getPatternType().equals("sp5")){
             Set<OWLClass> owlClasses = new HashSet<>();
             for(String s:ptrn.getClassList()){
-                owlClasses.add(df.getOWLClass(IRI.create(Variables.baseIRI+s)));
+                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
             }
-            OWLObjectUnionOf unionOf = df.getOWLObjectUnionOf(owlClasses);
-            axiom = df.getOWLSubClassOfAxiom(childC,unionOf);
+            OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
+            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,unionOf);
         }else if(ptrn.getPatternType().equals("sp6")){
-            OWLDataProperty property = df.getOWLDataProperty(IRI.create(Variables.baseIRI+ptrn.getdProperties().get(0)));
-            OWLLiteral literal = df.getOWLLiteral(ptrn.getLiterals().get(0));
-            OWLDataHasValue hasValue = df.getOWLDataHasValue(property,literal);
+            OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+ptrn.getdProperties().get(0)));
+            OWLLiteral literal = Init.getFactory().getOWLLiteral(ptrn.getLiterals().get(0));
+            OWLDataHasValue hasValue = Init.getFactory().getOWLDataHasValue(property,literal);
 
-            axiom = df.getOWLSubClassOfAxiom(childC,hasValue);
+            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,hasValue);
         }
 
-
-        addAxiom = new AddAxiom(ontology, axiom);
-        man.applyChange(addAxiom);
-
-        String reason = checkConsistency(ontology, man);
-
-        if (UtilMethods.consistent == 0) {
-            RemoveAxiom removeAxiom = new RemoveAxiom(ontology,axiom);
-            man.applyChange(removeAxiom);
-        }
-        man.saveOntology(ontology);
-        System.out.println(reason);
-        return reason;
+        return UtilMethods.addAxiom(axiom);
     }
 
     public String addEqClass(Pattern ptrn) throws OWLOntologyCreationException, OWLOntologyStorageException {
         AddAxiom addAxiom;
-        OWLOntologyManager man = OWLManager.createOWLOntologyManager();
-        OWLOntology ontology = loadOntology(man);
-        OWLDataFactory df = OWLManager.getOWLDataFactory();
         OWLAxiom axiom= null;
-        OWLClass current = df.getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
+        OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
         OWLClass parent=getParent(current);
         if(ptrn.getPatternType().equals("eq1")){  // a equivalent b and dP has value literal
 
-            OWLDataProperty property = df.getOWLDataProperty(IRI.create(Variables.baseIRI+ptrn.getdProperties().get(0)));
-            OWLLiteral literal = df.getOWLLiteral(ptrn.getLiterals().get(0));
-            OWLDataHasValue hasValue = df.getOWLDataHasValue(property,literal);
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(parent,hasValue);
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+ptrn.getdProperties().get(0)));
+            OWLLiteral literal = Init.getFactory().getOWLLiteral(ptrn.getLiterals().get(0));
+            OWLDataHasValue hasValue = Init.getFactory().getOWLDataHasValue(property,literal);
+            OWLClassExpression intersectionOf = hasValue;
+            if(parent!=null){
+                intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,hasValue);
+            }
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
 
         }else if(ptrn.getPatternType().equals("eq2")){// a eq to pC and a or b or c or ...
             Set<OWLClass> owlClasses = new HashSet<>();
             for(String s:ptrn.getClassList()){
-                owlClasses.add(df.getOWLClass(IRI.create(Variables.baseIRI+s)));
+                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
             }
-            OWLObjectUnionOf unionOf = df.getOWLObjectUnionOf(owlClasses);
-            if(parent.getIRI().getShortForm().equals("Thing")){
-                OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(parent,unionOf);
-                axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
-            }else{
-                axiom = df.getOWLEquivalentClassesAxiom(current,unionOf);
+            OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
+            OWLClassExpression intersectionOf = unionOf;
+            if(parent!=null){
+                intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,unionOf);
+
             }
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
         }else if(ptrn.getPatternType().equals("eq3")){ //a is eq to pc and (not b) and (not c)
             Set<OWLClassExpression> owlClasses = new HashSet<>();
             for(String s:ptrn.getClassList()){
-                owlClasses.add(df.getOWLObjectComplementOf(df.getOWLClass(IRI.create(Variables.baseIRI+s))));
+                owlClasses.add(Init.getFactory().getOWLObjectComplementOf(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s))));
             }
-            owlClasses.add(parent);
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(owlClasses);
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            if(parent!=null){
+                owlClasses.add(parent);
+            }
+
+            OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(owlClasses);
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
 
         }else if(ptrn.getPatternType().equals("eq4")){ // a eq to pc and p only (d or e or ...)
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
             Set<OWLClass> owlClasses = new HashSet<>();
             for(String s:ptrn.getClassList()){
-                owlClasses.add(df.getOWLClass(IRI.create(Variables.baseIRI+s)));
+                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
             }
-            OWLObjectUnionOf unionOf = df.getOWLObjectUnionOf(owlClasses);
-            OWLObjectAllValuesFrom allValuesFrom = df.getOWLObjectAllValuesFrom(property,unionOf);
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(parent,allValuesFrom);
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
+            OWLObjectAllValuesFrom allValuesFrom = Init.getFactory().getOWLObjectAllValuesFrom(property,unionOf);
+            OWLClassExpression intersectionOf = allValuesFrom;
+            if(parent!=null){
+                intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,allValuesFrom);
+            }
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
         }else if(ptrn.getPatternType().equals("eq5")){ // pc and op cardinality value
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
             OWLObjectCardinalityRestriction cardinality;
             if(ptrn.getCardinalityType().equals("min")){
-                cardinality = df.getOWLObjectMinCardinality(ptrn.getCardinality(),property);
+                cardinality = Init.getFactory().getOWLObjectMinCardinality(ptrn.getCardinality(),property);
             }else if(ptrn.getCardinalityType().equals("max")){
-                cardinality = df.getOWLObjectMaxCardinality(ptrn.getCardinality(),property);
+                cardinality = Init.getFactory().getOWLObjectMaxCardinality(ptrn.getCardinality(),property);
             }else{
-                cardinality = df.getOWLObjectExactCardinality(ptrn.getCardinality(),property);
+                cardinality = Init.getFactory().getOWLObjectExactCardinality(ptrn.getCardinality(),property);
             }
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(parent,cardinality);
-
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            OWLClassExpression intersectionOf = cardinality;
+            if(parent!=null){
+                intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,cardinality);
+            }
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
         }else if(ptrn.getPatternType().equals("eq6")){// a eq to pc and op has value individual
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            OWLIndividual individual = df.getOWLNamedIndividual(IRI.create(Variables.baseIRI+ptrn.getIndividuals().get(0)));
-            OWLObjectHasValue hasValue =df.getOWLObjectHasValue(property,individual);
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(parent,hasValue);
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLIndividual individual = Init.getFactory().getOWLNamedIndividual(IRI.create(Variables.baseIRI+ptrn.getIndividuals().get(0)));
+            OWLObjectHasValue hasValue =Init.getFactory().getOWLObjectHasValue(property,individual);
+            OWLClassExpression intersectionOf = hasValue;
+            if(parent!=null){
+                intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,hasValue);
+            }
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
 
         }else if(ptrn.getPatternType().equals("eq7")){// a eq t pc and (not b some c) and (not d some e) and ...
 
             Set<OWLClassExpression> owlClasses = new HashSet<>();
             for(int i = 0;i<ptrn.getoProperties().size();i++){
-                OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(i)));
-                OWLClass clz = df.getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(i)));
-                OWLObjectSomeValuesFrom someValuesFrom = df.getOWLObjectSomeValuesFrom(property,clz);
-                owlClasses.add(df.getOWLObjectComplementOf(someValuesFrom));
+                OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(i)));
+                OWLClass clz = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(i)));
+                OWLObjectSomeValuesFrom someValuesFrom = Init.getFactory().getOWLObjectSomeValuesFrom(property,clz);
+                owlClasses.add(Init.getFactory().getOWLObjectComplementOf(someValuesFrom));
             }
-            owlClasses.add(parent);
+            if(parent!=null){
+                owlClasses.add(parent);
+            }
 
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(owlClasses);
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(owlClasses);
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
         }else if(ptrn.getPatternType().equals("eq8")){ // a eq to op some d
-            OWLObjectProperty property = df.getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            OWLClass clz = df.getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
-            OWLObjectSomeValuesFrom someValuesFrom = df.getOWLObjectSomeValuesFrom(property,clz);
-            OWLObjectIntersectionOf intersectionOf = df.getOWLObjectIntersectionOf(parent,someValuesFrom);
-            axiom = df.getOWLEquivalentClassesAxiom(current,intersectionOf);
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            OWLClass clz = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
+            OWLObjectSomeValuesFrom someValuesFrom = Init.getFactory().getOWLObjectSomeValuesFrom(property,clz);
+            OWLClassExpression intersectionOf = someValuesFrom;
+            if(parent!=null){
+                intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,someValuesFrom);
+            }
+            axiom = Init.getFactory().getOWLEquivalentClassesAxiom(current,intersectionOf);
         }
 
-        System.out.println(axiom);
-        addAxiom = new AddAxiom(ontology, axiom);
-        man.applyChange(addAxiom);
-
-        String reason = checkConsistency(ontology, man);
-
-        if (UtilMethods.consistent == 0) {
-            RemoveAxiom removeAxiom = new RemoveAxiom(ontology,axiom);
-            man.applyChange(removeAxiom);
-        }
-        man.saveOntology(ontology);
-        System.out.println(reason);
-        return reason;
+        return UtilMethods.addAxiom(axiom);
     }
 
-//    public List<ISubClassPattern> getSubClassAxioms(OWLClass clz) {
-//        Set<OWLSubClassOfAxiom> suclss = ontology.getSubClassAxiomsForSubClass(clz);
-//        List<ISubClassPattern> patterns = new ArrayList<>();
-//
-//        for (OWLSubClassOfAxiom subClassOfAxiom : suclss) {
-//            OWLClassExpression expression = subClassOfAxiom.getSuperClass();
-//            Set<OWLObjectProperty> ex3 = expression.getObjectPropertiesInSignature();
-//            if(expression.getClassExpressionType() == ClassExpressionType.OWL_CLASS){
-//                patterns.add(new SubClassPClass(clz.getIRI().getShortForm(),expression.asOWLClass().getIRI().getShortForm()));
-//
-//            }else if (expression.getClassExpressionType() == ClassExpressionType.OBJECT_ALL_VALUES_FROM) {
-//                Set<OWLClassExpression> expression2 = expression.getNestedClassExpressions();
-//                if (expression2.iterator().next().getClassExpressionType() == ClassExpressionType.OBJECT_UNION_OF) {
-//                    patterns.add(new SubClassPAllValuesFrom(clz.getIRI().getShortForm(),ex3.iterator().next().getIRI().getShortForm(),getUnionClasses(expression)));
-//                }else{
-//                   List<String> list =  new ArrayList<>();
-//                   list.add(expression2.iterator().next().asOWLClass().getIRI().getShortForm());
-//                   patterns.add(new SubClassPAllValuesFrom(clz.getIRI().getShortForm(),ex3.iterator().next().getIRI().getShortForm(),list));
-//                }
-//            }else if(expression.getClassExpressionType() == ClassExpressionType.OBJECT_SOME_VALUES_FROM){
-//                Set<OWLClassExpression> expression2 = expression.getNestedClassExpressions();
-//                patterns.add(new SubClassPSomeValuesFrom(clz.getIRI().getShortForm(),ex3.iterator().next().getIRI().getShortForm(),expression2.iterator().next().getClassesInSignature().iterator().next().getIRI().getShortForm()));
-//            }else if(expression.getClassExpressionType() == ClassExpressionType.OBJECT_UNION_OF){
-//                patterns.add(new SubClassPUnionOf(clz.getIRI().getShortForm(),getUnionClasses(expression)));
-//            }else if(expression.getClassExpressionType() == ClassExpressionType.OBJECT_HAS_VALUE){
-//                Set<OWLClassExpression> expression2 = expression.getNestedClassExpressions();
-//                patterns.add(new SubClassPObjectHasValue(clz.getIRI().getShortForm(),ex3.iterator().next().getIRI().getShortForm(),expression2.iterator().next().getIndividualsInSignature().iterator().next().getIRI().getShortForm()));
-//
-//            }else if(expression.getClassExpressionType() == ClassExpressionType.DATA_HAS_VALUE) {
-//                Set<OWLClassExpression> expression2 = expression.getNestedClassExpressions();
-//                patterns.add(new SubClassPDataHasValue(clz.getIRI().getShortForm(),ex3.iterator().next().getIRI().getShortForm(),expression2.iterator().next().getDatatypesInSignature().iterator().next().getIRI().getShortForm()));
-//            }
-//
-//        }
-//        return patterns;
-//    }
-
-
     public OWLClass getParent(OWLClass clz) {
-        Set<OWLClass> classes = ontology.getClassesInSignature();
+        Set<OWLClass> classes = Init.getOntology().getClassesInSignature();
         OWLClass parent=null;
         for(OWLClass c:classes){
 
-            for (OWLClass child : reasoner.getSubClasses(c, true).getFlattened()) {
-                if (reasoner.isSatisfiable(child)) {
+            for (OWLClass child : Init.getReasoner(Variables.STRUCTURAL).getSubClasses(c, true).getFlattened()) {
+                if (Init.getReasoner(Variables.STRUCTURAL).isSatisfiable(child)) {
                     if(child.equals(clz)){
                         parent = c;
                     }
@@ -371,11 +337,11 @@ public class EditClass {
 
     public List<ClassAxiom> getEquivalentClassAxioms(OWLClass clz){
         List<ClassAxiom> ptrns = new ArrayList<>();
-        Set<OWLEquivalentClassesAxiom> sx = ontology.getEquivalentClassesAxioms(clz);
+        Set<OWLEquivalentClassesAxiom> sx = Init.getOntology().getEquivalentClassesAxioms(clz);
         int i=0;
         for(OWLAxiom a:sx){
             ClassAxiom ptrn = new ClassAxiom();
-            ptrn.setAxiom(explain(ontology,ontology.getOWLOntologyManager(),reasonerFactory,reasoner,a));
+            ptrn.setAxiom(explain(Init.getOntology(),Init.getManager(),Init.getOwlReasonerFactory(Variables.Pellet),Init.getReasoner(Variables.Pellet),a));
             ptrn.setOwlAxiom(a);
             ptrn.setAxiomType("eq");
             ptrn.setId(i);
@@ -387,11 +353,11 @@ public class EditClass {
 
     public List<ClassAxiom> getSubClassOfAxioms(OWLClass clz){
         List<ClassAxiom> ptrns = new ArrayList<>();
-        Set<OWLSubClassOfAxiom> sx = ontology.getSubClassAxiomsForSubClass(clz);
+        Set<OWLSubClassOfAxiom> sx = Init.getOntology().getSubClassAxiomsForSubClass(clz);
         int i=0;
         for(OWLAxiom a:sx){
             ClassAxiom ptrn = new ClassAxiom();
-            ptrn.setAxiom(explain(ontology,ontology.getOWLOntologyManager(),reasonerFactory,reasoner,a));
+            ptrn.setAxiom(explain(Init.getOntology(),Init.getManager(),Init.getOwlReasonerFactory(Variables.Pellet),Init.getReasoner(Variables.Pellet),a));
             ptrn.setOwlAxiom(a);
             ptrn.setAxiomType("sub");
             ptrn.setId(i);
@@ -404,7 +370,7 @@ public class EditClass {
 
     public List<String> getDisjointAxioms(OWLClass clz){
         List<String> axioms = new ArrayList<>();
-        Set<OWLDisjointClassesAxiom> sx = ontology.getDisjointClassesAxioms(clz);
+        Set<OWLDisjointClassesAxiom> sx = Init.getOntology().getDisjointClassesAxioms(clz);
         for(OWLDisjointClassesAxiom a:sx){
             Set<OWLClass> djc = a.getClassesInSignature();
             for(OWLClass c:djc){
@@ -417,21 +383,11 @@ public class EditClass {
         return axioms;
     }
 
-    public String removeAxiom(OWLAxiom axiom) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        String result="success";
-        OWLOntologyManager man = OWLManager.createOWLOntologyManager();
-        OWLOntology ontology = loadOntology(man);
-        OWLDataFactory df = OWLManager.getOWLDataFactory();
-        RemoveAxiom removeAxiom = new RemoveAxiom(ontology,axiom);
-        man.applyChange(removeAxiom);
-        man.saveOntology(ontology);
-        return result;
-    }
 
     public List<String> getDoaminOf(OWLClass clz){
         List<String> domainOf = new ArrayList<>();
-        for(OWLObjectProperty p: ontology.getObjectPropertiesInSignature()){
-            Set<OWLObjectPropertyDomainAxiom> da = ontology.getObjectPropertyDomainAxioms(p);
+        for(OWLObjectProperty p: Init.getOntology().getObjectPropertiesInSignature()){
+            Set<OWLObjectPropertyDomainAxiom> da = Init.getOntology().getObjectPropertyDomainAxioms(p);
             for(OWLObjectPropertyDomainAxiom a:da){
                 if(a.getClassesInSignature().iterator().next().equals(clz)){
                     domainOf.add(a.getObjectPropertiesInSignature().iterator().next().getIRI().getShortForm());
@@ -443,8 +399,8 @@ public class EditClass {
 
     public List<String> getRangeOf(OWLClass clz){
         List<String> rangeOf = new ArrayList<>();
-        for(OWLObjectProperty p: ontology.getObjectPropertiesInSignature()){
-            Set<OWLObjectPropertyRangeAxiom> da = ontology.getObjectPropertyRangeAxioms(p);
+        for(OWLObjectProperty p: Init.getOntology().getObjectPropertiesInSignature()){
+            Set<OWLObjectPropertyRangeAxiom> da = Init.getOntology().getObjectPropertyRangeAxioms(p);
             for(OWLObjectPropertyRangeAxiom a:da){
                 if(a.getClassesInSignature().iterator().next().equals(clz)){
                     rangeOf.add(a.getObjectPropertiesInSignature().iterator().next().getIRI().getShortForm());
@@ -454,35 +410,99 @@ public class EditClass {
         return rangeOf;
     }
 
+    public List<String> getRange(OWLObjectProperty p) throws OWLException, JsonProcessingException {
+        List<String> rangeOf = new ArrayList<>();
+        Init init = new Init();
+        Set<OWLObjectPropertyRangeAxiom> da = Init.getOntology().getObjectPropertyRangeAxioms(p);
+        for(OWLObjectPropertyRangeAxiom a:da){
+            OWLClass clz = a.getClassesInSignature().iterator().next();
+            clzes = new ArrayList<>();
+            List<OWLClass> clzes = printHierarchy(init.getReasoner(Variables.STRUCTURAL),clz);
+            for(OWLClass c:clzes){
+                rangeOf.add(c.getIRI().getShortForm());
+//                Set<OWLNamedIndividual> nodes = init.getReasoner(Variables.STRUCTURAL).getInstances(c,true).getFlattened();
+//                for(OWLNamedIndividual i:nodes){
+//                    rangeOf.add(i.getIRI().getShortForm());
+//                }
+            }
+        }
+        return rangeOf;
+    }
+
+    public String addorRemoveDisjointClass(Pattern ptrn,int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
+        OWLClass dis = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
+        OWLAxiom dja = Init.getFactory().getOWLDisjointClassesAxiom(current,dis);
+        if(addOrRemove==1){
+            return UtilMethods.addAxiom(dja);
+        }else{
+            return UtilMethods.removeAxiom(dja);
+        }
+
+    }
+
+//1=add
+    public String addOrRemoveDomainOf(Pattern ptrn,int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
+        OWLAxiom axiom;
+        if(getAllObjectProperties().contains(ptrn.getoProperties().get(0))){
+            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            axiom = Init.getFactory().getOWLObjectPropertyDomainAxiom(property,current);
+        }else{
+            OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+            axiom = Init.getFactory().getOWLDataPropertyDomainAxiom(property,current);
+        }
+        if(addOrRemove==1){
+            return UtilMethods.addAxiom(axiom);
+        }else{
+            return UtilMethods.removeAxiom(axiom);
+        }
+
+
+    }
+
+    public String addOrremoveRangeOf(Pattern ptrn, int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+
+        OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
+        OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
+        OWLAxiom axiom= Init.getFactory().getOWLObjectPropertyRangeAxiom(property,current);
+
+        if(addOrRemove==0){
+            return UtilMethods.removeAxiom(axiom);
+        }else{
+           return UtilMethods.addAxiom(axiom);
+        }
+    }
 
 
     public String explain(OWLOntology ontology, OWLOntologyManager manager, OWLReasonerFactory reasonerFactory, OWLReasoner reasoner, OWLAxiom axiomToExplain) {
 
-        DefaultExplanationGenerator explanationGenerator = new DefaultExplanationGenerator(manager, reasonerFactory, ontology, reasoner, new SilentExplanationProgressMonitor());
-        Set<OWLAxiom> explanation = explanationGenerator.getExplanation(axiomToExplain);
-        ExplanationOrderer deo = null;
-        if(axiomToExplain.getAxiomType().equals(AxiomType.SUBCLASS_OF)){
-            deo = new hello.ExplanationOrdererImpl(manager);
-        }else{
-            deo = new ExplanationOrdererImpl(manager);
-        }
+       // DefaultExplanationGenerator explanationGenerator = new DefaultExplanationGenerator(manager, reasonerFactory, ontology, reasoner, new SilentExplanationProgressMonitor());
+       // Set<OWLAxiom> explanation = explanationGenerator.getExplanation(axiomToExplain);
+//        Set<OWLAxiom> explanation = new HashSet<>();
+//        explanation.add(axiomToExplain);
+//        ExplanationOrderer deo = null;
+//        if(axiomToExplain.getAxiomType().equals(AxiomType.SUBCLASS_OF)){
+//            deo = new hello.ExplanationOrdererImpl(manager);
+//        }else{
+//            deo = new ExplanationOrdererImpl(manager);
+//        }
 
-        ExplanationTree explanationTree = deo.getOrderedExplanation(axiomToExplain, explanation);
+       // ExplanationTree explanationTree = deo.getOrderedExplanation(axiomToExplain, explanation);
         OWLObjectRenderer renderer = new DLSyntaxObjectRenderer();
-        OWLAxiom axiom = explanationTree.getUserObject();
-        return  DLtoenglish(renderer.render(axiom));
-
+     //   OWLAxiom axiom = explanationTree.getUserObject();
+        return  DLtoenglish(renderer.render(axiomToExplain));
     }
 
+
     public String DLtoenglish(String exp){
-        String eng = exp.replace("≡","equivalent with")
+        String eng = exp.replace("≡","is equivalent to")
                 .replace("⊓","and")
                 .replace("⊔","or")
                 .replace("¬","not ")
-                .replace("⊑","is sub class of ")
+                .replace("⊑","is a sub class of ")
                 .replace("≥","at least")
                 .replace("≤","at most")
-                .replace("=","exact")
                 .replace("=","exact");
 
 
@@ -506,7 +526,5 @@ public class EditClass {
         eng = eng.replace("has some {","has value {").replace("⊤","").replaceAll("\\.","");
         return eng;
     }
-
-
 
 }

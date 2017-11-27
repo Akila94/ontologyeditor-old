@@ -10,62 +10,58 @@ import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
 
-import static hello.util.UtilMethods.loadOntology;
 
 /**
  * Created by Lotus on 9/9/2017.
  */
 public class Init {
-    private OWLOntologyManager manager;
-    private OWLOntology ontology;
-    private OWLReasonerFactory owlReasonerFactory;
-    private OWLReasoner reasoner;
-    private OWLDataFactory factory;
+    private final static OWLOntologyManager manager= OWLManager.createOWLOntologyManager();
+    private static OWLOntology ontology ;
+    private static OWLReasonerFactory owlReasonerFactory;
+    private static OWLReasoner reasoner;
+    private final static OWLDataFactory factory= OWLManager.getOWLDataFactory();
 
-    public Init() {
-        manager = OWLManager.createOWLOntologyManager();
-        this.factory = OWLManager.getOWLDataFactory();
+
+    static {
         try{
-            ontology = loadOntology(manager);
+            UtilMethods untiles = new UtilMethods();
+            if(ontology==null) {
+                ontology = untiles.loadOntology(manager, Variables.ontoPath);
+            }
+            if(owlReasonerFactory==null) {
+                owlReasonerFactory = new StructuralReasonerFactory();
+            }
         } catch (OWLOntologyCreationException e) {
             e.printStackTrace();
         }
-
     }
 
-    public OWLReasoner getReasoner() {
+    public static OWLReasoner getReasoner() {
         return reasoner;
     }
 
-    public void setReasoner(OWLReasoner reasoner) {
-        this.reasoner = reasoner;
+    public static void setReasoner(OWLReasoner r) {
+        reasoner = r;
     }
 
-    public OWLDataFactory getFactory() {
+    public static OWLDataFactory getFactory() {
         return factory;
     }
 
-    public void setFactory(OWLDataFactory factory) {
-        this.factory = factory;
-    }
-
-    public OWLOntologyManager getManager() {
+    public static OWLOntologyManager getManager() {
         return manager;
     }
 
-    public void setManager(OWLOntologyManager manager) {
-        this.manager = manager;
-    }
 
-    public OWLOntology getOntology() {
+    public static OWLOntology getOntology() {
         return ontology;
     }
 
-    public void setOntology(OWLOntology ontology) {
-        this.ontology = ontology;
+    public static void setOntology(OWLOntology o) {
+        ontology = o;
     }
 
-    public OWLReasonerFactory getOwlReasonerFactory(String type) {
+    public static OWLReasonerFactory getOwlReasonerFactory(String type) {
         if(type==Variables.STRUCTURAL){
             owlReasonerFactory = new StructuralReasonerFactory();
         } else if(type==Variables.Pellet){
@@ -74,8 +70,8 @@ public class Init {
         return owlReasonerFactory;
     }
 
-    public OWLReasoner getReasoner(String type) {
-        reasoner = this.getOwlReasonerFactory(type).createNonBufferingReasoner(ontology);
+    public static OWLReasoner getReasoner(String type) {
+        reasoner = getOwlReasonerFactory(type).createNonBufferingReasoner(ontology);
         return reasoner;
     }
 }

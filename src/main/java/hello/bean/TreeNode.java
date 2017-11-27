@@ -11,15 +11,15 @@ import java.util.List;
  * Created by Lotus on 8/17/2017.
  */
 public class TreeNode<T>{
-    private String name = null;
+    private String text = null;
     @JsonManagedReference
     private List<TreeNode> children = new ArrayList<>();
-    private String size="1500";
+   // private String size="1500";
     @JsonBackReference
     private TreeNode parent = null;
 
     public TreeNode(String name) {
-        this.name = name;
+        this.text = name;
     }
 
     public void addChild(TreeNode child) {
@@ -44,12 +44,12 @@ public class TreeNode<T>{
         return children;
     }
 
-    public String getName() {
-        return name;
+    public String getText() {
+        return text;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setText(String text) {
+        this.text = text;
     }
 
     private void setParent(TreeNode parent) {
@@ -60,11 +60,5 @@ public class TreeNode<T>{
         return parent;
     }
 
-    public String getSize() {
-        return size;
-    }
 
-    public void setSize(String size) {
-        this.size = size;
-    }
 }

@@ -40,7 +40,10 @@ public class DataPropertyHierarchy {
         }
 
         for (OWLDataPropertyExpression child : reasoner.getSubDataProperties(property, true).getFlattened()) {
-            searchTree(property.asOWLDataProperty().getIRI().getShortForm(), objectPropertyTree).addChild(child.asOWLDataProperty().getIRI().getShortForm());
+            if(!child.asOWLDataProperty().getIRI().getShortForm().equals("bottomDataProperty")){
+                searchTree(property.asOWLDataProperty().getIRI().getShortForm(), objectPropertyTree).addChild(child.asOWLDataProperty().getIRI().getShortForm());
+            }
+
             if (!child.equals(property)) {
                 printHierarchy(reasoner, child.asOWLDataProperty(), level + 1);
             }

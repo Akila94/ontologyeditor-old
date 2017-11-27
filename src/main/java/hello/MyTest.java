@@ -2,28 +2,36 @@ package hello;
 
 import com.clarkparsia.owlapi.explanation.DefaultExplanationGenerator;
 import com.clarkparsia.owlapi.explanation.util.SilentExplanationProgressMonitor;
-import com.clarkparsia.owlapiv3.OWL;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import hello.util.Init;
+import hello.util.UtilMethods;
 import hello.util.Variables;
 import jdk.nashorn.internal.runtime.ParserException;
-import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer;
+import org.semanticweb.owlapi.expression.OWLEntityChecker;
+import org.semanticweb.owlapi.expression.ShortFormEntityChecker;
 import org.semanticweb.owlapi.io.OWLObjectRenderer;
-import org.semanticweb.owlapi.manchestersyntax.renderer.ManchesterOWLSyntaxOWLObjectRendererImpl;
+import org.semanticweb.owlapi.io.OWLParser;
+import org.semanticweb.owlapi.io.StreamDocumentSource;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.Node;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
-import org.semanticweb.owlapi.util.OWLEntityRenamer;
+import org.semanticweb.owlapi.search.EntitySearcher;
+import org.semanticweb.owlapi.util.*;
+import org.semanticweb.owlapi.util.mansyntax.ManchesterOWLSyntaxParser;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrderer;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationTree;
 
+import javax.annotation.Nonnull;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
-import java.util.regex.*;
 
 import static hello.util.UtilMethods.checkConsistency;
-import static hello.util.UtilMethods.loadOntology;
 
 /**
  * Created by Lotus on 8/21/2017.
@@ -35,75 +43,48 @@ public class MyTest {
     private static OWLReasoner reasoner;
     private static OWLDataFactory dataFactory;
 
-    public static void main(String[] args) throws OWLOntologyCreationException, OWLOntologyStorageException {
+
+
+    public static void main(String[] args) throws OWLException, IOException {
         manager = OWLManager.createOWLOntologyManager();
-        ontology = loadOntology(manager);
+        UtilMethods utiles = new UtilMethods();
+        ontology = utiles.loadOntology(manager,Variables.baseIRI);
         owlReasonerFactory = new StructuralReasonerFactory();
         dataFactory = OWLManager.getOWLDataFactory();
         reasoner = owlReasonerFactory.createNonBufferingReasoner(ontology);
-
         System.out.println("-----------------Test running-----------------");
-        processAxioms(ontology);
-        List<String> strings = new ArrayList<>();
-        for(OWLClass c:ontology.getClassesInSignature()){
-            Set<OWLEquivalentClassesAxiom> axioms = ontology.getEquivalentClassesAxioms(c);
-            for(OWLAxiom a: axioms){
-
-                String s = explain(ontology,manager,owlReasonerFactory,reasoner,a);
-                String rel = "(\\w+)\\s⊑\\s(\\w+)$";
-               // String rel2 = "(\\w+)\\s⊑\\s∃\\s(\\w+)\\.\\w+$";
-                String rel2 = "(\\w+)\\s⊑\\s∃\\s(\\w+).\\{(\\w+)\\}";
-
-                Pattern p = Pattern.compile(rel,Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                strings.add(s);
-                Matcher m = p.matcher(s);
-                if (m.find())
-                {
-
-
-                }else{
-                    Pattern p2 = Pattern.compile(rel2,Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
-                    Matcher m2 = p2.matcher(s);
-                    if(!m2.find()){
-
-                    }
-
-                }
-               //
-            }
-        }
-        System.out.println(strings.size());
-        for(String s:strings){
-            System.out.println(s);
-        }
-
-
-        OWLClass entity = dataFactory.getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI + "VegetarianPizza"));
-//        for(OWLClass c:ontology.getClassesInSignature()){
-//            Set<OWLEquivalentClassesAxiom> sx = ontology.getEquivalentClassesAxioms(c);
-//
-//            List<IEqClassPattern> set = getEquivalentAxioms(c);
-////            for(IEqClassPattern p: set){
-////                System.out.println(entity.getIRI().getShortForm()+" "+p.toString());
-////            }
-//            for(OWLAxiom a:sx){
-//                System.out.println(explain(ontology,manager,owlReasonerFactory,reasoner,a));
-//
-//            }
-//
-//        }
-
-        //subClassPAllValueFrom
-
-
+       // System.out.println( isFunctional("hasApplicationMethodForControlMethodEvent"));
 
 
     }
 
 
 
+    public static List<OWLObjectPropertyDomainAxiom> getDoaminOf(OWLClass clz){
+        List<OWLObjectPropertyDomainAxiom> domainOf = new ArrayList<>();
+        for(OWLObjectProperty p: ontology.getObjectPropertiesInSignature()){
+            Set<OWLObjectPropertyDomainAxiom> da = ontology.getObjectPropertyDomainAxioms(p);
+            for(OWLObjectPropertyDomainAxiom a:da){
+                if(a.getClassesInSignature().iterator().next().equals(clz)){
+                    domainOf.add(a);
+                }
+            }
+        }
+        return domainOf;
+    }
 
+    public static List<OWLObjectPropertyRangeAxiom> getRangeOf(OWLClass clz){
+        List<OWLObjectPropertyRangeAxiom> rangeOf = new ArrayList<>();
+        for(OWLObjectProperty p: ontology.getObjectPropertiesInSignature()){
+            Set<OWLObjectPropertyRangeAxiom> da = ontology.getObjectPropertyRangeAxioms(p);
+            for(OWLObjectPropertyRangeAxiom a:da){
+                if(a.getClassesInSignature().iterator().next().equals(clz)){
+                    rangeOf.add(a);
+                }
+            }
+        }
+        return rangeOf;
+    }
 
     private static void printClasses(Set<OWLClass> classes) {
         System.out.println("ALL CLASSES (" + classes.size() + ")");
@@ -174,7 +155,8 @@ public class MyTest {
     public static String removeSubClass(String parent, String child) throws OWLOntologyCreationException, OWLOntologyStorageException {
         OWLOntologyManager man = OWLManager.createOWLOntologyManager();
 
-        OWLOntology ontology = loadOntology(man);
+        UtilMethods utiles = new UtilMethods();
+        OWLOntology ontology = utiles.loadOntology(man,Variables.ontoPath);
         OWLDataFactory df = OWLManager.getOWLDataFactory();
 
         OWLClass entity = df.getOWLEntity(EntityType.CLASS, IRI.create("http://lumii.lv/ontologies/pizza.owl#", parent));
@@ -192,27 +174,7 @@ public class MyTest {
         return reason;
     }
 
-    public static void deleteClass(String classToDelete) throws OWLOntologyStorageException, OWLOntologyCreationException {
-        OWLOntologyManager man = OWLManager.createOWLOntologyManager();
 
-        OWLOntology ontology = loadOntology(man);
-
-        OWLClass remove = man.getOWLDataFactory().getOWLClass(IRI.create("http://lumii.lv/ontologies/pizza.owl#", classToDelete));
-        Set<OWLAxiom> toRemove = new HashSet<>();
-
-        for (OWLAxiom select : ontology.getAxioms()) {
-
-            if (select.getSignature().contains(remove)) {
-                toRemove.add(select);
-
-            }
-        }
-
-        man.removeAxioms(ontology, toRemove);
-
-        man.saveOntology(ontology);
-
-    }
 
     private static void renameURI(OWLEntity entityToRename, IRI newNameIRI, OWLOntologyManager mngr) throws OWLOntologyStorageException {
         if (!mngr.contains(newNameIRI)) {
@@ -285,47 +247,13 @@ public class MyTest {
     }
 
 
-    private static void processAxioms(OWLOntology ontology){
-        OWLObjectVisitor objectVisitor = new OWLObjectVisitor();
-        if(ontology!=null)
-        {
-            Set<OWLAxiom> axiomSet = ontology.getAxioms();
-            HashMap<String,Integer> axiomsMap = new HashMap<String, Integer>();
-            if(axiomSet!=null && axiomSet.size()>0)
-            {
-                Iterator<OWLAxiom> setIter = axiomSet.iterator();
-                OWLAxiom axiom = null;
-                while(setIter.hasNext()){
-                    axiom = setIter.next();
-                    if(axiomsMap.containsKey(axiom.getAxiomType().getName())){
-                        axiomsMap.put(axiom.getAxiomType().getName(),axiomsMap.get(axiom.getAxiomType().getName())+1);
-                    }
-                    else{
-                        axiomsMap.put(axiom.getAxiomType().getName(),1);
-                    }
-                    axiom.accept(objectVisitor);
-                }
-                System.out.println("-------------- Axiom Info for Ontology =["+ontology+"]");
-                System.out.println("No.of Axiom Types =["+axiomsMap.size()+"]");
-                Iterator<String> mapIter = axiomsMap.keySet().iterator();
-                String axiomType = null;
-                while(mapIter.hasNext()){
-                    axiomType = mapIter.next();
-                    System.out.println("Axiom Type =["+axiomType+"] No.of Axioms =["+axiomsMap.get(axiomType)+"]");
-                }
-                System.out.println("-------------- ------------------------------------------");
-            }
-        }
 
-       // System.out.println(new OWLObjectVisitor().);
-
-    }
 
 
 
     public static OWLClass getParent(OWLClass clz) {
         Set<OWLClass> classes = ontology.getClassesInSignature();
-        OWLClass parent=null;
+        OWLClass parent=dataFactory.getOWLThing();
         for(OWLClass c:classes){
 
             for (OWLClass child : reasoner.getSubClasses(c, true).getFlattened()) {
@@ -337,5 +265,23 @@ public class MyTest {
             }
         }
         return parent;
+    }
+
+    public static void parseClassExpression(
+            @Nonnull String classExpressionString) {
+        Init init =new Init();
+        Set<OWLOntology> importsClosure = init.getOntology().getImportsClosure();
+        OWLEntityChecker entityChecker = new ShortFormEntityChecker(
+                new BidirectionalShortFormProviderAdapter(manager, importsClosure,
+                        new SimpleShortFormProvider()));
+        ManchesterOWLSyntaxParser parser = OWLManager.createManchesterParser();
+        parser.setDefaultOntology(init.getOntology());
+        parser.setOWLEntityChecker(entityChecker);
+        parser.setStringToParse(classExpressionString);
+
+
+        OWLClassExpression axiom=parser.parseClassExpression();
+        System.out.println(axiom);
+        // return parser.parseClassExpression();
     }
 }
