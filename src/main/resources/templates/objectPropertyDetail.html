@@ -1,0 +1,174 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+
+    <title>Object Properties</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="../css/main.css"/>
+    <link href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" rel="Stylesheet"/>
+    <link rel="stylesheet" href="../css/jqtree.css"/>
+</head>
+<body>
+<div th:replace="fragments/header :: header"/>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-3 tree well well-sm">
+            <h4>Object Property Hierarchy<a href="#" onclick="loadPropertyData()" data-toggle="modal" data-target="#addOProperty" id="addBtn"><span class="glyphicon glyphicon glyphicon-plus fa-md "/></a></h4>
+            <div id="tree"></div>
+        </div>
+        <div class="col-sm-9 tree well well-sm">
+
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="addOProperty">
+    <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header" style="padding:35px 50px;">
+                <button type="button" data-dismiss="modal" class="close">&times;</button>
+                <h4><span class="glyphicon glyphicon-lock"></span> Add New Object Property</h4>
+            </div>
+            <div class="modal-body" style="padding:40px 50px;">
+
+                <!--/*@thymesVar id="pattern" type="hello.bean.Pattern"*/-->
+                <form action="#" id="add-form" th:action="@{/addNewOProperty}" th:object="${pattern}" method="post" name="addForm">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" th:field="*{currentClass}" class="form-control" required="required"/>
+                    </div>
+                    <div class="form-group">
+                        <label>Parent</label>
+                        <select class="form-control" id="op1" name="oProperties">
+                            <option value="topObjectProperty">topObjectProperty</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="F"/>Functional</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="IF"/>Inverse Functional</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="T"/>Transitive</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="S"/>Symmetric</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="AS"/>Asymmetric</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="R"/>Reflexive</label>
+                        </div>
+                        <div class="checkbox">
+                            <label><input type="checkbox" th:field="*{classList}" value="IR"/>Irreflexive</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea class="form-control" rows="5" id="comment"  th:field="*{description}" required="required"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" id="submitBtn" class="btn btn-success btn-block"> Add </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript" src="../webjars/jquery/2.2.4/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js" ></script>
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/jstree/3.3.3/themes/default/style.min.css" />
+<script src="//cdnjs.cloudflare.com/ajax/libs/jstree/3.3.3/jstree.min.js"></script>
+<script  th:inline="javascript">
+    /*<![CDATA[*/
+    var data = JSON.parse([[${tree}]]);
+    var node = ([[${session.currentOP}]]);
+    /*]]>*/
+
+    $(document).ready(function () {
+        $('#tree')
+            .on('changed.jstree', function (e, data) {
+                var objNode = data.instance.get_node(data.selected);
+                var url = '/objectPropertyDetail/' + objNode.text;
+                location.href = url;
+            })
+            .jstree({
+                core: {
+                    data: data
+                },
+                types: {
+                    "default": {
+                        "icon": "glyphicon glyphicon-leaf"
+                    }
+                },
+                plugins: ["types"]
+
+            });
+        $("#tree").on('ready.jstree', function () {
+            var instance = $("#tree").jstree(true);
+            var branchCont = instance._model.data;
+            for (var branchKey in branchCont) {
+                var branch = branchCont[branchKey];
+                if (branch.text === node) {
+                    instance.select_node(branchKey, true, false);
+                    break;
+                }
+            }
+        });
+
+        $("[name='addForm']").on('submit', function(e){
+            e.preventDefault();
+            var self = this;
+            var form = $(this);
+            if (form.data('requestRunning')) {
+                return;
+            }
+
+            form.data('requestRunning', true);
+
+            $.ajax({
+                url: form.attr("action"),
+                type: form.attr("method"),
+                data: form.serialize(),
+                success: function(result){
+                    if(result.indexOf("PASSED")>-1){
+                        $("#errorMsg").text(result).removeClass("alert-danger").addClass("alert alert-success");
+                    }else{
+                        $("#errorMsg").text(result).removeClass("alert-success").addClass("alert alert-danger");
+                    }
+                    location.reload(true);
+                },
+                complete: function (e) {
+                    form.data('requestRunning', false);
+                }
+
+            });
+        });
+
+
+    });
+
+    function loadPropertyData() {
+        $.ajax({
+            url: '/getObjectProperties',
+            type: 'get',
+            dataType: 'json',
+            success: function (json) {
+                $.each(json, function (i, value) {
+                    $('#op1').append($('<option>').text(value).attr('value', value))
+                        .append("</option>")
+                });
+            }
+        });
+    }
+</script>
+</body>
+</html>

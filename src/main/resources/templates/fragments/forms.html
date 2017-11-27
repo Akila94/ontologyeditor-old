@@ -1,0 +1,210 @@
+<html xmlns:th="http://www.thymeleaf.org">
+
+
+<div th:fragment="subForm1" id="option1" class="group">
+        <form action="#" id="sp1" th:action="@{/classDetail}" th:object="${pattern}" method="post" name="addAxiom">
+            <input type="hidden" name="patternType" value="sp1"/>
+            <div class="form-group">
+                <input type="text" th:value="${oClass.className}" name="currentClass" class="form-control" readonly="readonly"/>
+            </div>
+            <div class="form-group">
+                <label> Is a Sub Class of</label>
+                <select  class="form-control" th:field="*{classList}" >
+                    <option th:each="string : ${classList}"
+                            th:value="${string}"
+                            th:text="${string}">Wireframe
+                    </option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button type="submit" id="submitBtnSp1" class="btn btn-success btn-block"> Add Axiom </button>
+            </div>
+        </form>
+    <script>
+        $("form[name='addAxiom']").on('submit', function(e){
+            e.preventDefault();
+            var self = this;
+            var form = $(this);
+            var errorMsg = $("[name='errorMsg']");
+            if (form.data('requestRunning')) {
+                return;
+            }
+
+            form.data('requestRunning', true);
+
+            $.ajax({
+                url: form.attr("action"),
+                type: form.attr("method"),
+                data: form.serialize(),
+                success: function(result){
+                    if(result.indexOf("PASSED")>-1){
+                        errorMsg.text(result).removeClass("alert-danger").addClass("alert alert-success");
+                    }else{
+                        errorMsg.text(result).removeClass("alert-success").addClass("alert alert-danger");
+                    }
+                    location.reload(true);
+                },
+                complete: function (e) {
+                    form.data('requestRunning', false);
+                }
+
+            });
+        });
+    </script>
+    </div>
+<div th:fragment="subForm2" id="option2" class="group">
+    <form action="#" id="sp2" th:action="@{/classDetail}" th:object="${pattern}" method="post" name="addAxiom">
+
+        <input type="hidden" name="patternType" value="sp2"/>
+        <div class="form-group">
+            <input type="text" th:value="${oClass.className}" name="currentClass"  class="form-control" readonly="readonly"/>
+        </div>
+        <div class="form-group">
+            <label> Is a Sub Class of</label>
+            <select  class="form-control" th:field="*{oProperties}">
+                <option th:each="string : ${oPropertyList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label> has some </label>
+            <select  class="form-control" th:field="*{classList}">
+                <option th:each="string : ${classList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" id="submitBtnSp2" class="btn btn-success btn-block"> Add Axiom </button>
+        </div>
+    </form>
+</div>
+<div th:fragment="subForm3" id="option3" class="group">
+    <form action="#" id="sp3" th:action="@{/classDetail}" th:object="${pattern}" method="post" name="addAxiom">
+
+        <input type="hidden" name="patternType" value="sp3"/>
+        <div class="form-group">
+            <input type="text" th:value="${oClass.className}" name="currentClass"  class="form-control" readonly="readonly"/>
+        </div>
+        <div class="form-group">
+            <label> Is a Sub Class of</label>
+            <select  class="form-control" th:field="*{oProperties}">
+                <option th:each="string : ${oPropertyList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label> has only </label>
+            <select  multiple="true" class="form-control" th:field="*{classList}">
+                <option th:each="string : ${classList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" id="submitBtnSp3" class="btn btn-success btn-block"> Add Axiom </button>
+        </div>
+
+    </form>
+
+</div>
+<div th:fragment="subForm4" id="option4" class="group">
+    <form action="#" id="sp4" th:action="@{/classDetail}" th:object="${pattern}" method="post" name="addAxiom">
+
+        <input type="hidden" name="patternType" value="sp4"/>
+        <div class="form-group">
+            <input type="text" th:value="${oClass.className}" name="currentClass"  class="form-control" readonly="readonly"/>
+        </div>
+        <div class="form-group">
+            <label> Is a Sub Class of</label>
+            <select  class="form-control" th:field="*{oProperties}">
+                <option th:each="string : ${oPropertyList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label> has value </label>
+            <select class="form-control" th:field="*{individuals}">
+                <option th:each="string : ${individuals}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" id="submitBtnSp4" class="btn btn-success btn-block"> Add Axiom </button>
+        </div>
+
+    </form>
+</div>
+<div th:fragment="subForm5" id="option5" class="group">
+    <form action="#" id="sp5" th:action="@{/classDetail}" th:object="${pattern}" method="post" name="addAxiom">
+
+        <input type="hidden" name="patternType" value="sp5"/>
+        <div class="form-group">
+            <input type="text" th:value="${oClass.className}" name="currentClass" class="form-control" readonly="readonly"/>
+        </div>
+        <div class="form-group">
+            <label> Is a Sub Class of</label>
+            <select multiple="true" class="form-control" th:field="*{classList}">
+                <option th:each="string : ${classList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" id="submitBtnSp5" class="btn btn-success btn-block"> Add Axiom </button>
+        </div>
+
+    </form>
+</div>
+<div th:fragment="subForm6" id="option6" class="group">
+    <form action="#" id="sp6" th:action="@{/classDetail}" th:object="${pattern}" method="post" name="addAxiom">
+
+        <input type="hidden" name="patternType" value="sp6"/>
+        <div class="form-group">
+            <input type="text" th:value="${oClass.className}" name="currentClass" class="form-control" readonly="readonly"/>
+        </div>
+        <div class="form-group">
+            <label> Is a Sub Class of</label>
+            <select class="form-control" th:field="*{dProperties}">
+                <option th:each="string : ${dPropertyList}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label> has value </label>
+            <input type="text"  class="form-control" placeholder="Enter value" th:field="*{literals}"/>
+        </div>
+        <div class="form-group">
+            <label> data type of</label>
+            <select class="form-control" th:field="*{dTypes}">
+                <option th:each="string : ${dTypes}"
+                        th:value="${string}"
+                        th:text="${string}">Wireframe
+                </option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-success btn-block"> Add Axiom </button>
+        </div>
+
+    </form>
+</div>
+</html>
