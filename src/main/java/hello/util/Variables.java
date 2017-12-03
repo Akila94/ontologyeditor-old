@@ -11,14 +11,14 @@ public class Variables {
 //    public static final String baseIRI="http://www.w3.org/TR/2003/PR-owl-guide-20031209/wine#";
 
 //    public static final String ontologyFilePath = "C:\\\\Users\\\\Lotus\\\\Desktop\\\\Research\\\\implementation\\\\pizza.owl";
-    public static final String ontologyFilePath = "C:\\\\Users\\\\Lotus\\\\Desktop\\\\Research\\\\implementation\\\\SLN_Ontology.owl";
+    public static final String ontologyFilePath = "C:\\\\Users\\\\Lotus\\\\Desktop\\\\Research\\\\ResearchX\\\\SLN_Ontology.owl";
 //    public static final String ontologyFilePath = "C:\\\\Users\\\\Lotus\\\\Desktop\\\\Research\\\\implementation\\\\instOntology.owl";
 //    public static final String ontologyFilePath = "C:\\\\Users\\\\Lotus\\\\Desktop\\\\Research\\\\implementation\\\\person.owl";
 //    public static final String ontologyFilePath = "C:\\\\Users\\\\Lotus\\\\Desktop\\\\Research\\\\implementation\\\\wine.rdf";
 
 
     // public static final String ontoPath = "ontoDir/SLN_Ontology_1.0.0.owl";
-     public static final String ontoPath = "C:\\Users\\Lotus\\Desktop\\Research\\implementation\\sln_onto\\SLN_Ontology_1.0.0.owl";
+     public static final String ontoPath = "C:\\Users\\Lotus\\Desktop\\Research\\ResearchX\\sln_onto\\SLN_Ontology_1.0.0.owl";
      public static final String baseOntoPath = "C:\\Users\\Lotus\\Desktop\\Research\\implementation\\sln_onto\\";
 
     /**  reasoner  **/

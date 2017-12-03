@@ -32,8 +32,8 @@
             <div id="subClasses" class="panel panel-primary">
                 <div class="panel-heading">Sub Class Axioms<a onclick="loadClassData()" href="#" class="pull-right" data-toggle="modal" data-target="#addSubAxiom" id="addSub"><span class="glyphicon glyphicon-plus-sign fa-lg "/></a></div>
                 <div class="panel-body" th:if="${subClasses != null}">
-                    <ul  class="list-group" th:each="item : ${subClasses}">
-                        <li class="list-group-item" >
+                    <ul  class="list-group" >
+                        <li class="list-group-item" th:each="item : ${subClasses}">
                             <span th:text="${item.axiom}">Grrr!!!</span>
                             <form action="#" name="removeAxiom" th:action="@{/removeAxiom}" th:object="${toDelete}" method="post">
                                 <input type="hidden" th:value="${item.id}" name="id"/>
@@ -48,8 +48,8 @@
             <div id="equivalentClasses" class="panel panel-primary">
                 <div class="panel-heading">Equivalent Class Axioms<a onclick="loadClassData()" href="#" class="pull-right" data-toggle="modal" data-target="#addEqAxiom" id="addEq"><span class="glyphicon glyphicon-plus-sign fa-lg "/></a></div>
                 <div class="panel-body" th:if="${eqClasses != null}">
-                    <ul class="list-group" th:each="item : ${eqClasses}">
-                        <li class="list-group-item" >
+                    <ul class="list-group" >
+                        <li class="list-group-item" th:each="item : ${eqClasses}">
                             <span th:text="${item.axiom}">Grrr!!!</span>
                             <form action="#" name="removeAxiom" th:action="@{/removeAxiom}" th:object="${toDelete}" method="post">
                                 <input type="hidden" th:value="${item.id}" name="id"/>
@@ -62,10 +62,10 @@
             </div>
 
             <div id="disjointClasses" class="panel panel-primary">
-                <div class="panel-heading">Disjoint Classes<a onclick="getDisjointClasses()" href="#" class="pull-right" data-toggle="modal" data-target="#addDjAxiom" id="addDj"><span class="glyphicon glyphicon-plus-sign fa-lg "/></a></div>
+                <div class="panel-heading">Disjoint Classes<a onclick="getNonDisjointClasses()" href="#" class="pull-right" data-toggle="modal" data-target="#addDjAxiom" id="addDj"><span class="glyphicon glyphicon-plus-sign fa-lg "/></a></div>
                 <div class="panel-body" th:if="${djClasses != null}">
-                    <ul class="list-group" th:each="item : ${djClasses}">
-                        <li class="list-group-item" >
+                    <ul class="list-group" >
+                        <li class="list-group-item" th:each="item : ${djClasses}">
                             <span th:text="${item}">Grrr!!!</span>
                             <form action="#" name="removeAxiom" th:action="@{/removeDisjointAxiom}" th:object="${pattern}" method="post">
                                 <input type="hidden" th:value="${session.currentClass}" name="currentClass"/>
@@ -79,8 +79,8 @@
             <div id="domainOf" class="panel panel-primary">
                 <div class="panel-heading">Domain of<a onclick="getDomainOfData()" href="#" class="pull-right" data-toggle="modal" data-target="#domain" id="addDomain"><span class="glyphicon glyphicon-plus-sign fa-lg "/></a></div>
                 <div class="panel-body" th:if="${domainOf != null}">
-                    <ul class="list-group" th:each="item : ${domainOf}">
-                        <li class="list-group-item" >
+                    <ul class="list-group" >
+                        <li class="list-group-item" th:each="item : ${domainOf}">
                             <span th:text="${item}">Grrr!!!</span>
                             <form action="#" name="removeAxiom" th:action="@{/removeDomainOf}" th:object="${pattern}" method="post">
                                 <input type="hidden" th:value="${session.currentClass}" name="currentClass"/>
@@ -95,8 +95,8 @@
             <div id="rangeOf" class="panel panel-primary">
                 <div class="panel-heading">Range of <a onclick="getRangeOfData()" href="#" class="pull-right" data-toggle="modal" data-target="#range" id="addRange"><span class="glyphicon glyphicon-plus-sign fa-lg "/></a></div>
                 <div class="panel-body" th:if="${rangeOf != null}">
-                    <ul class="list-group" th:each="item : ${rangeOf}">
-                        <li class="list-group-item" >
+                    <ul class="list-group" >
+                        <li class="list-group-item" th:each="item : ${rangeOf}">
                             <span th:text="${item}">Grrr!!!</span>
                             <form action="#" name="removeAxiom" th:action="@{/removeRangeOf}" th:object="${pattern}" method="post">
                                 <input type="hidden" th:value="${session.currentClass}" name="currentClass"/>
@@ -497,7 +497,7 @@
             <div class="modal-body" style="padding:40px 50px;">
                 <form th:action="@{/addDisjoint}" method="post" th:object="${pattern}" name="addAxiom">
                     <input type="hidden" th:value="${session.currentClass}" name="currentClass"/>
-                    <div class="form-group"><label>Select Disjoint Class</label><select class="form-control" id="disjointClassses" name="classList"></select></div>
+                    <div class="form-group"><label>Select Disjoint Class</label><select class="form-control" id="nonDis" name="classList"></select></div>
                     <div class="form-group">
                         <button type="submit" class="btn btn-success btn-block"> Add Disjoint Axiom </button>
                     </div>
@@ -698,7 +698,20 @@
             }
         });
     }
-
+function getNonDisjointClasses(){
+    $('#nonDis').empty();
+    $.ajax({
+        url: '/getNonDisjoint/'+node,
+        type: 'get',
+        dataType: 'json',
+        success: function (json) {
+            $.each(json, function (i, value) {
+                $('#nonDis').append($('<option>').text(value).attr('value', value))
+                    .append("</option>");
+            });
+        }
+    });
+}
     function loadClassData() {
         if ($('#cl1').is(':empty')) {
             $.ajax({

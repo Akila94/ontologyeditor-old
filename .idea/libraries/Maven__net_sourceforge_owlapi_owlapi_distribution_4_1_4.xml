@@ -1,5 +1,8 @@
 <component name="libraryTable">
   <library name="Maven: net.sourceforge.owlapi:owlapi-distribution:4.1.4">
+    <ANNOTATIONS>
+      <root url="file://$PROJECT_DIR$/src/test/java/hello" />
+    </ANNOTATIONS>
     <CLASSES>
       <root url="jar://$MAVEN_REPOSITORY$/net/sourceforge/owlapi/owlapi-distribution/4.1.4/owlapi-distribution-4.1.4.jar!/" />
     </CLASSES>

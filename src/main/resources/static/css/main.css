@@ -72,7 +72,7 @@ svg{
     margin-top: -6px;
 
 }
-.glyphicon-remove-circle{
+.glyphicon-remove-circle,.glyphicon-pencil{
     color: red;
     font-size: 30px;
     margin-top: -12px;

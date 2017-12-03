@@ -12,6 +12,8 @@
     <bytecodeTargetLevel>
       <module name="complete" target="1.8" />
       <module name="gs-serving-web-content" target="1.8" />
+      <module name="ontologyeditor_main" target="1.8" />
+      <module name="ontologyeditor_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>
 </project>

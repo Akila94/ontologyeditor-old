@@ -2,7 +2,6 @@ package hello;
 
 import com.clarkparsia.owlapi.explanation.DefaultExplanationGenerator;
 import com.clarkparsia.owlapi.explanation.util.SilentExplanationProgressMonitor;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import hello.util.Init;
 import hello.util.UtilMethods;
 import hello.util.Variables;
@@ -12,24 +11,23 @@ import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer;
 import org.semanticweb.owlapi.expression.OWLEntityChecker;
 import org.semanticweb.owlapi.expression.ShortFormEntityChecker;
 import org.semanticweb.owlapi.io.OWLObjectRenderer;
-import org.semanticweb.owlapi.io.OWLParser;
-import org.semanticweb.owlapi.io.StreamDocumentSource;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.Node;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
-import org.semanticweb.owlapi.search.EntitySearcher;
-import org.semanticweb.owlapi.util.*;
+import org.semanticweb.owlapi.util.BidirectionalShortFormProviderAdapter;
+import org.semanticweb.owlapi.util.OWLEntityRenamer;
+import org.semanticweb.owlapi.util.SimpleShortFormProvider;
 import org.semanticweb.owlapi.util.mansyntax.ManchesterOWLSyntaxParser;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrderer;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationTree;
 
-import javax.annotation.Nonnull;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static hello.util.UtilMethods.checkConsistency;
 
@@ -54,7 +52,8 @@ public class MyTest {
         reasoner = owlReasonerFactory.createNonBufferingReasoner(ontology);
         System.out.println("-----------------Test running-----------------");
        // System.out.println( isFunctional("hasApplicationMethodForControlMethodEvent"));
-
+        Set<OWLObjectProperty> propertySet = Init.getOntology().getObjectPropertiesInSignature();
+        System.out.println(propertySet);
 
     }
 
@@ -268,7 +267,7 @@ public class MyTest {
     }
 
     public static void parseClassExpression(
-            @Nonnull String classExpressionString) {
+            String classExpressionString) {
         Init init =new Init();
         Set<OWLOntology> importsClosure = init.getOntology().getImportsClosure();
         OWLEntityChecker entityChecker = new ShortFormEntityChecker(

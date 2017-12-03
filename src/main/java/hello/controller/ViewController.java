@@ -14,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
@@ -138,13 +137,9 @@ public class ViewController {
 
     @RequestMapping(value = "/getClassList", method = RequestMethod.GET)
     public ResponseEntity<?> getClassList(){
-        return  ResponseEntity.ok(classList);
+        return  ResponseEntity.ok(new EditClass().getAllClasses());
     }
 
-    @RequestMapping(value = "/getObjectProperties", method = RequestMethod.GET)
-    public ResponseEntity<?> getObjectPropertyList(){
-        return  ResponseEntity.ok(oPropertyList);
-    }
     @RequestMapping(value = "/getDataProperties", method = RequestMethod.GET)
     public ResponseEntity<?> getDataPropertyList(){
         return  ResponseEntity.ok(dPropertyList);
