@@ -8,6 +8,7 @@ import org.codehaus.groovy.ast.Variable;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
+import org.semanticweb.owlapi.search.EntitySearcher;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.*;
@@ -53,13 +54,13 @@ public class ObjectPropertyService {
         }
     }
 
-    public String addProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addOProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLDeclarationAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
 
-    public String removeProperty(String p) throws OWLOntologyStorageException, OWLOntologyCreationException {
+    public String removeOProperty(String p) throws OWLOntologyStorageException, OWLOntologyCreationException {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         Set<OWLAxiom> toRemove = new HashSet<>();
         for (OWLAxiom select : Init.getOntology().getAxioms())
@@ -69,10 +70,13 @@ public class ObjectPropertyService {
                 toRemove.add(select);
             }
         }
+
+        UtilMethods.axiomsQueue = new ArrayList<>();
+        UtilMethods.axiomsQueue.addAll(toRemove);
+        UtilMethods.removedAnnotations = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(property, Init.getOntology());
+
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        OWLDeclarationAxiom axiom = Init.getFactory().getOWLDeclarationAxiom(property);
-//        UtilMethods.removeAxiom(axiom);
         return "PASSED: Property Deleted";
     }
 
@@ -86,7 +90,7 @@ public class ObjectPropertyService {
          return properties;
     }
 
-    public String addSubProperty(String p, String pa) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addSubOProperty(String p, String pa) throws OWLOntologyCreationException, OWLOntologyStorageException {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLObjectProperty parent = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+pa));
         OWLSubObjectPropertyOfAxiom sub = Init.getFactory().getOWLSubObjectPropertyOfAxiom(property,parent);
@@ -189,6 +193,10 @@ public class ObjectPropertyService {
     public String removeInverseProperty(String prop) throws OWLOntologyCreationException, OWLOntologyStorageException {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         Set<OWLInverseObjectPropertiesAxiom> toRemove = Init.getOntology().getInverseObjectPropertyAxioms(property);
+
+        UtilMethods.axiomsQueue = new ArrayList<>();
+        UtilMethods.axiomsQueue.addAll(toRemove);
+
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
         return "PASSED";
@@ -312,5 +320,29 @@ public class ObjectPropertyService {
         OWLClass r = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+range));
         OWLObjectPropertyRangeAxiom axiom = Init.getFactory().getOWLObjectPropertyRangeAxiom(property,r);
         return UtilMethods.removeAxiom(axiom);
+    }
+
+    public List<String> getOPCharacteristics(String property){
+        List<String> propertyTypes = new ArrayList<>();
+        if(isFunctional(property)){
+            propertyTypes.add("F");
+        }
+        if(isInverseFunctional(property)){
+            propertyTypes.add("IF");
+        }
+        if(isTransitive(property)){
+            propertyTypes.add("T");
+        }
+        if(isSymmetric(property)){
+            propertyTypes.add("S");
+        }if(isAsymmetric(property)){
+            propertyTypes.add("AS");
+        }
+        if(isReflexive(property)){
+            propertyTypes.add("R");
+        }if(isIrreflexive(property)){
+            propertyTypes.add("IR");
+        }
+        return propertyTypes;
     }
 }

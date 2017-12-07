@@ -56,7 +56,8 @@
                                 <input type="hidden" th:value="${item.axiom}" name="axiom"/>
                                 <input type="hidden" th:value="${item.axiomType}" name="axiomType"/>
                                 <button type="submit" class="btn btn-link pull-right" name="delete"><span class="glyphicon glyphicon-remove-circle fa-lg "/></button>
-                            </form></li>
+                            </form>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -619,6 +620,7 @@
                     break;
                 }
             }
+            $("#class-tree").jstree('open_all');
         });
 
         $('.group').hide();

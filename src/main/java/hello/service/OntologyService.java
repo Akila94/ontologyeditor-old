@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * Created by Lotus on 10/6/2017.
  */
-public class OntologyInfo {
+public class OntologyService {
 
     public List<String> processAxioms(OWLOntology ontology){
         List<String> strings = new ArrayList<>();
@@ -18,13 +18,13 @@ public class OntologyInfo {
         if(ontology!=null)
         {
             Set<OWLAxiom> axiomSet = ontology.getAxioms();
-            HashMap<String,Integer> axiomsMap = new HashMap<String, Integer>();
+            HashMap<String,Integer> axiomsMap = new HashMap<>();
             if(axiomSet!=null && axiomSet.size()>0)
             {
-                Iterator<OWLAxiom> setIter = axiomSet.iterator();
-                OWLAxiom axiom = null;
-                while(setIter.hasNext()){
-                    axiom = setIter.next();
+                Iterator<OWLAxiom> axiomIterator = axiomSet.iterator();
+                OWLAxiom axiom;
+                while(axiomIterator.hasNext()){
+                    axiom = axiomIterator.next();
                     if(axiomsMap.containsKey(axiom.getAxiomType().getName())){
                         axiomsMap.put(axiom.getAxiomType().getName(),axiomsMap.get(axiom.getAxiomType().getName())+1);
                     }
@@ -34,10 +34,10 @@ public class OntologyInfo {
                     axiom.accept(objectVisitor);
                 }
                 strings.add("No.of Axiom Types =["+axiomsMap.size()+"]");
-                Iterator<String> mapIter = axiomsMap.keySet().iterator();
-                String axiomType = null;
-                while(mapIter.hasNext()){
-                    axiomType = mapIter.next();
+                Iterator<String> stringIterator = axiomsMap.keySet().iterator();
+                String axiomType;
+                while(stringIterator.hasNext()){
+                    axiomType = stringIterator.next();
                     strings.add(axiomType +"\t\t\t"+"["+axiomsMap.get(axiomType)+"]");
                 }
             }
@@ -47,7 +47,7 @@ public class OntologyInfo {
 
     }
 
-    public String getOntlogyName(OWLOntology owlOntology){
+    public String getOntologyName(OWLOntology owlOntology){
         String ontoName = null;
         Set<OWLAnnotation> annotations = owlOntology.getAnnotations();
         for(OWLAnnotation a:annotations){

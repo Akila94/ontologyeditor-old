@@ -14,7 +14,6 @@ import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
-import java.util.ArrayList;
 import java.util.List;
 
 @Controller
@@ -66,33 +65,12 @@ public class ObjectPropertyController {
     }
     @RequestMapping("/getOPChars/{property}")
     public ResponseEntity<?> getOPCharacteristics(@PathVariable String property) throws OWLException {
-        ObjectPropertyService oPService = new ObjectPropertyService();
-        List<String> propertyTypres = new ArrayList<>();
-        if(oPService.isFunctional(property)){
-            propertyTypres.add("F");
-        }
-        if(oPService.isInverseFunctional(property)){
-            propertyTypres.add("IF");
-        }
-        if(oPService.isTransitive(property)){
-            propertyTypres.add("T");
-        }
-        if(oPService.isSymmetric(property)){
-            propertyTypres.add("S");
-        }if(oPService.isAsymmetric(property)){
-            propertyTypres.add("AS");
-        }
-        if(oPService.isReflexive(property)){
-            propertyTypres.add("R");
-        }if(oPService.isIrreflexive(property)){
-            propertyTypres.add("IR");
-        }
-        return ResponseEntity.ok(propertyTypres);
+        return ResponseEntity.ok(new ObjectPropertyService().getOPCharacteristics(property));
     }
 
     @PostMapping("/addNewOProperty")
     public ResponseEntity<?> addObjectProperty(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        String result=null;
+        String result;
 
         if(pattern.getClassList().contains("S") && pattern.getClassList().contains("AS")){
             result = "a property can't be symmetric and asymmetric at the same time";
@@ -119,15 +97,10 @@ public class ObjectPropertyController {
             return ResponseEntity.ok(result);
         }
         ObjectPropertyService objectPropertyService = new ObjectPropertyService();
-
-        if(pattern.getCardinality()==0){
-            if(pattern.getoProperties().get(0).equals("topObjectProperty")){
-                result = objectPropertyService.addProperty(pattern.getCurrentClass());
-            }else{
-                result = objectPropertyService.addSubProperty(pattern.getCurrentClass(),pattern.getoProperties().get(0));
-            }
+        if(pattern.getoProperties().get(0).equals("topObjectProperty")){
+            result = objectPropertyService.addOProperty(pattern.getCurrentClass());
         }else{
-            result = "anything is not changed!";
+            result = objectPropertyService.addSubOProperty(pattern.getCurrentClass(),pattern.getoProperties().get(0));
         }
 
         for(String s:pattern.getClassList()){
@@ -150,9 +123,76 @@ public class ObjectPropertyController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/editCharacteristics")
+    public ResponseEntity<?> editOPCharacteristics(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        System.out.println(pattern.getCurrentClass());
+        ObjectPropertyService ops = new ObjectPropertyService();
+        String result = null;
+        String prop = (String)session.getAttribute("currentOP");
+        if(pattern.getCurrentClass().equals("F")){
+            if(ops.isFunctional(prop)){
+                result = ops.removeFunctionalProperty(prop);
+            }else{
+                result = ops.addFunctionalProperty(prop);
+
+            }
+            return  ResponseEntity.ok(result);
+        }
+        if(pattern.getCurrentClass().equals("IF")){
+            if(ops.isInverseFunctional(prop)){
+                result = ops.removeInverseFunctionalProperty(prop);
+            }else{
+                result = ops.addInverseFunctionalProperty(prop);
+
+            }
+            return  ResponseEntity.ok(result);
+        }
+        if(pattern.getCurrentClass().equals("T")){
+            if(ops.isTransitive(prop)){
+                result = ops.removeTransitiveProperty(prop);
+            }else{
+                result = ops.addTransitiveProperty(prop);
+            }
+            return  ResponseEntity.ok(result);
+        }
+        if(pattern.getCurrentClass().equals("S")){
+            if(ops.isSymmetric(prop)){
+                result = ops.removeSymetricProperty(prop);
+            }else{
+                result = ops.addSymmetricProperty(prop);
+            }
+            return  ResponseEntity.ok(result);
+        }
+        if(pattern.getCurrentClass().equals("AS")){
+            if(ops.isAsymmetric(prop)){
+                result = ops.removeAsymetricProperty(prop);
+            }else{
+                result = ops.addAsymmetricProperty(prop);
+            }
+            return  ResponseEntity.ok(result);
+        }
+        if(pattern.getCurrentClass().equals("R")){
+            if(ops.isReflexive(prop)){
+                result = ops.removeReflexiveProperty(prop);
+            }else{
+                result = ops.addReflexiveProperty(prop);
+            }
+            return  ResponseEntity.ok(result);
+        }
+        if(pattern.getCurrentClass().equals("IR")){
+            if(ops.isIrreflexive(prop)){
+                result = ops.removeIreflexiveProperty(prop);
+            }else{
+                result = ops.addIreflexiveProperty(prop);
+            }
+            return  ResponseEntity.ok(result);
+        }
+        return  ResponseEntity.ok(result);
+    }
+
     @GetMapping("removeOProperty")
     public ResponseEntity<?> removeOProperty(HttpSession session) throws OWLOntologyStorageException, OWLOntologyCreationException {
-        String result = new ObjectPropertyService().removeProperty((String) session.getAttribute("currentOP"));
+        String result = new ObjectPropertyService().removeOProperty((String) session.getAttribute("currentOP"));
         session.setAttribute("currentOP","topObjectProperty");
         return ResponseEntity.ok(result);
     }

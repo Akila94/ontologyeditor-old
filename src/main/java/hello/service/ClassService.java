@@ -24,13 +24,13 @@ import static hello.util.UtilMethods.searchTree;
  * Created by Lotus on 8/16/2017.
  */
 @Service
-public class EditClass {
+public class ClassService {
 
     private TreeNode classTree = null;
 
 
 
-    public EditClass() {
+    public ClassService() {
     }
 
 
@@ -92,26 +92,7 @@ public class EditClass {
         Collections.sort(classList);
         return classList;
     }
-    public List<String> getAllObjectProperties(){
-        List<String> propertyList = new ArrayList<>();
 
-
-        Set<OWLObjectProperty> properties = Init.getOntology().getObjectPropertiesInSignature();
-        for(OWLObjectProperty p:properties){
-            propertyList.add(p.getIRI().getShortForm());
-        }
-        Collections.sort(propertyList);
-        return propertyList;
-    }
-    public List<String> getAllDataProperties(){
-        List<String> propertyList = new ArrayList<>();
-        Set<OWLDataProperty> properties = Init.getOntology().getDataPropertiesInSignature();
-        for(OWLDataProperty p:properties){
-            propertyList.add(p.getIRI().getShortForm());
-        }
-        Collections.sort(propertyList);
-        return propertyList;
-    }
     public List<String> getAllIndividuals(){
         List<String> individuals = new ArrayList<>();
         Set<OWLNamedIndividual> properties = Init.getOntology().getIndividualsInSignature();
@@ -384,7 +365,7 @@ public class EditClass {
     }
 
 
-    public List<String> getDoaminOf(OWLClass clz){
+    public List<String> getDomainOf(OWLClass clz){
         List<String> domainOf = new ArrayList<>();
         for(OWLObjectProperty p: Init.getOntology().getObjectPropertiesInSignature()){
             Set<OWLObjectPropertyDomainAxiom> da = Init.getOntology().getObjectPropertyDomainAxioms(p);
@@ -429,7 +410,7 @@ public class EditClass {
         return rangeOf;
     }
 
-    public String addorRemoveDisjointClass(Pattern ptrn,int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addOrRemoveDisjointClass(Pattern ptrn, int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
         OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
         OWLClass dis = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
         OWLAxiom dja = Init.getFactory().getOWLDisjointClassesAxiom(current,dis);
@@ -445,7 +426,7 @@ public class EditClass {
     public String addOrRemoveDomainOf(Pattern ptrn,int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
         OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getCurrentClass()));
         OWLAxiom axiom;
-        if(getAllObjectProperties().contains(ptrn.getoProperties().get(0))){
+        if(new ObjectPropertyService().getAllOProperties().contains(ptrn.getoProperties().get(0))){
             OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
             axiom = Init.getFactory().getOWLObjectPropertyDomainAxiom(property,current);
         }else{

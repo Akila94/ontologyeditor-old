@@ -51,7 +51,7 @@ public class DBService {
         }
         User u = userRepository.findUserByName(author);
         ChangeType type = changeTypeRepository.findChangeTypeById(t);
-        ChangeOn changeOn = changeOnRepository.findChangeOnById(29);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(1);
         OntoVersion version = ontoVersionRepository.findOntoVersionById(1);
 
         OntoChange ontoChange = new OntoChange();

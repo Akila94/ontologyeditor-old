@@ -28,6 +28,7 @@ public class OntoVersion  implements java.io.Serializable {
      private String name;
      private Boolean current;
      private String location;
+     private int prior;
      @OneToMany(fetch=FetchType.LAZY, mappedBy="ontoVersion")
      private Set<OntoChange> ontoChanges = new HashSet(0);
      @ManyToMany(fetch=FetchType.LAZY)
@@ -149,14 +150,20 @@ public class OntoVersion  implements java.io.Serializable {
     public Set<User> getUsers() {
         return this.users;
     }
-    
+
+
     public void setUsers(Set<User> users) {
         this.users = users;
     }
 
+    @Column(name="prior")
+    public int getPrior() {
+        return prior;
+    }
 
-
-
+    public void setPrior(int prior) {
+        this.prior = prior;
+    }
 }
 
 
