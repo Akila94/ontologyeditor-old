@@ -57,8 +57,8 @@ public class ClassController {
         if(pattern.getClassList().get(0).equals("Thing")){
             result =  classService.addClass(pattern.getCurrentClass());
         }else{
-            pattern.setPatternType("sp1");
-            result = classService.addSubClass(pattern);
+            pattern.setPatternType("o1");
+            result = classService.addClassAxiom(pattern,0);
         }
         if (errors.hasErrors()) {
             return ResponseEntity.badRequest().body(result);
@@ -66,25 +66,27 @@ public class ClassController {
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(),user.getUsername(),pattern.getDescription(),1);
+            dbService.addNewClass(pattern.getCurrentClass(),user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
     @RequestMapping(value = "/removeClass", method = RequestMethod.GET)
-    public String removeClass(Model model,HttpSession session) throws OWLException, JsonProcessingException {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+    public ResponseEntity<?> removeClass(@ModelAttribute Pattern pattern, HttpSession session) throws OWLException, JsonProcessingException {
+
 
         String toDeleteClass = (String) session.getAttribute("currentClass");
         ClassService classService = new ClassService();
         OWLClass clz  = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+toDeleteClass));
         classList.remove(toDeleteClass);
-        classService.deleteClass(clz);
+        String result = classService.deleteClass(clz);
         session.setAttribute("currentClass","Thing");
+        if(UtilMethods.consistent==1) {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeClass(toDeleteClass, user.getUsername(), pattern.getDescription(), 1);
+        }
 
-        dbService.addOrRemoveClass(toDeleteClass, user.getUsername(),toDeleteClass+" Class removed",2);
-
-        return "redirect:/classDetail/Thing";
+        return  ResponseEntity.ok(result);
     }
 
 
@@ -158,68 +160,28 @@ public class ClassController {
         return  ResponseEntity.ok(domainOfProps);
     }
 
-//    public @ResponseBody
-//    List<OClass> getTags(@RequestParam String term) throws OWLOntologyCreationException {
-//
-//        return simulateSearchResult(term);
-//    }
-//
-//    private List<OClass> simulateSearchResult(String tagName) {
-//
-//        List<OClass> result = new ArrayList<>();
-//
-//        for (int i=0;i<classList.size();i++) {
-//            if (classList.get(i).contains(tagName)) {
-//                result.add(new OClass(i,classList.get(i)));
-//            }
-//        }
-//        return result;
-//    }
-
-
-    @PostMapping("/classDetail")
-    public ResponseEntity<?> addAxiom(@ModelAttribute Pattern ptrn, Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        String result;
-        ClassService classService = new ClassService();
-        if(ptrn.getPatternType().contains("sp")){
-            result = classService.addSubClass(ptrn);
-        }else{
-            result = classService.addEqClass(ptrn);
-        }
-
-        if (errors.hasErrors()) {
-            return ResponseEntity.badRequest().body(result);
-        }
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(ptrn.getCurrentClass(), user.getUsername(),"Axiom added: "+UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),1);
-        }
-        return ResponseEntity.ok(result);
-    }
-
     @PostMapping("/addDisjoint")
     public ResponseEntity<?> addDisjointClass(@ModelAttribute Pattern pattern,Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
         ClassService classService =new ClassService();
-        String result = classService.addOrRemoveDisjointClass(pattern,1);
+        String result = classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),1);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(), user.getUsername(),"Disjoint Classes Added: " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),1);
+            dbService.addAxiom(pattern.getCurrentClass(), user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/removeDisjointAxiom")
-    public ResponseEntity<?> removeDisjoint(@ModelAttribute Pattern pattern, Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    @GetMapping("/removeDisjointAxiom/{clz}")
+    public ResponseEntity<?> removeDisjoint(@PathVariable String clz, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
         ClassService classService =new ClassService();
-        String result = classService.addOrRemoveDisjointClass(pattern,0);
+        String result = classService.addOrRemoveDisjointClass((String) session.getAttribute("currentClass"),clz,0);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(), user.getUsername(),"Disjoint Classes Removed " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),2);
+            dbService.removeAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
@@ -227,36 +189,36 @@ public class ClassController {
     public ResponseEntity<?> addDomainOf(@ModelAttribute Pattern pattern,Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
         ClassService classService =new ClassService();
-        String result = classService.addOrRemoveDomainOf(pattern,1);
+        String result = classService.addOrRemoveDomainOf(pattern.getCurrentClass(),pattern.getoProperties().get(0),1);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(), user.getUsername(),"Domain of Axiom Added: " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),1);
+            dbService.addAxiom(pattern.getCurrentClass(), user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/removeDomainOf")
-    public ResponseEntity<?> removeDomainOf(@ModelAttribute Pattern pattern, Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    @GetMapping("/removeDomainOf/{property}")
+    public ResponseEntity<?> removeDomainOf(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
         ClassService classService =new ClassService();
-        String result = classService.addOrRemoveDomainOf(pattern,0);
+        String result = classService.addOrRemoveDomainOf((String) session.getAttribute("currentClass"),property,0);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(), user.getUsername(),"Domain of Axiom Removed: " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),2);
+            dbService.removeAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
-    @PostMapping("/removeRangeOf")
-    public ResponseEntity<?> removeRangeOf(@ModelAttribute Pattern pattern, Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    @GetMapping("/removeRangeOf/{property}")
+    public ResponseEntity<?> removeRangeOf(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
         ClassService classService =new ClassService();
-        String result = classService.addOrremoveRangeOf(pattern,0);
+        String result = classService.addOrRemoveRangeOf((String) session.getAttribute("currentClass"),property,0);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(), user.getUsername(),"Range of Axiom Removed: " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),2);
+            dbService.removeAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
@@ -264,48 +226,78 @@ public class ClassController {
     public ResponseEntity<?> addRangeOf(@ModelAttribute Pattern pattern, Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
         ClassService classService =new ClassService();
-        String result = classService.addOrremoveRangeOf(pattern,1);
+        String result = classService.addOrRemoveRangeOf(pattern.getCurrentClass(),pattern.getoProperties().get(0),1);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass(pattern.getCurrentClass(), user.getUsername(),"Range of Axiom Added: " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),1);
-        }
-        return ResponseEntity.ok(result);
-    }
-
-    @PostMapping("/removeAxiom")
-    public ResponseEntity<?> removeAxiom(@ModelAttribute ClassAxiom axiom, Errors errors,HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        String des;
-        ClassService classService =new ClassService();
-//        if(errors.hasErrors()){
-//            System.out.println(errors);
-//        }
-        String result = null;
-//        System.out.println(axiom.getAxiom());
-//        System.out.println(axiom.getOwlAxiom());
-        if(axiom.getAxiomType().equals("sub")){
-            for(ClassAxiom a:subClasses){
-                if(a.getId()==axiom.getId()){
-                    result = UtilMethods.removeAxiom(a.getOwlAxiom());
-                }
-            }
-            des = "Sub-Class Axiom Removed:";
-        }else{
-            for(ClassAxiom a:eqClasses){
-                if(a.getId()==axiom.getId()){
-                    result = UtilMethods.removeAxiom(a.getOwlAxiom());
-                }
-            }
-            des = "Equivalent-Class Axiom Removed:";
-        }
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addOrRemoveClass((String) session.getAttribute("currentClass"),user.getUsername(),des+ " " + UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),2);
+            dbService.addAxiom(pattern.getCurrentClass(), user.getUsername(),pattern.getDescription(),1);
         }
         return ResponseEntity.ok(result);
     }
 
 
+
+    @GetMapping("/removeSubClassOfAxiom/{id}")
+    public ResponseEntity<?> removeSubClassAxiom(@PathVariable int id,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        String result=null;
+        for(ClassAxiom a:subClasses){
+            if(a.getId()==id){
+                result = UtilMethods.removeAxiom(a.getOwlAxiom());
+            }
+        }
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+    @GetMapping("/removeEqClassOfAxiom/{id}")
+    public ResponseEntity<?> removeEqClassAxiom(@PathVariable int id,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        String result=null;
+        for(ClassAxiom a:eqClasses){
+            if(a.getId()==id){
+                result = UtilMethods.removeAxiom(a.getOwlAxiom());
+            }
+        }
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/addSubClassAxiom")
+    public ResponseEntity<?> addSubClassAxioms(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        pattern.setCurrentClass((String) session.getAttribute("currentClass"));
+        String result = new ClassService().addClassAxiom(pattern,0);
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/addEqClassAxiom")
+    public ResponseEntity<?> addEqClassAxioms(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        pattern.setCurrentClass((String) session.getAttribute("currentClass"));
+        String result = new ClassService().addClassAxiom(pattern,1);
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),1);
+        }
+
+        return ResponseEntity.ok(result);
+    }
 
 }

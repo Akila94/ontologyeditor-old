@@ -77,7 +77,8 @@ public class ObjectPropertyService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        return "PASSED: Property Deleted";
+        UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
+        return "Property Deleted";
     }
 
     public List<String> getAllOProperties(){
@@ -199,7 +200,7 @@ public class ObjectPropertyService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        return "PASSED";
+        return UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
     }
 
     public boolean isFunctional(String prop){

@@ -22,6 +22,7 @@ public class OntoChange  implements java.io.Serializable {
      @ManyToOne(fetch=FetchType.LAZY)
      private ChangeType changeType;
      private String concept;
+     private String changeAxiom;
      @ManyToOne(fetch=FetchType.LAZY)
      private ChangeOn changeOn;
      @ManyToOne(fetch=FetchType.LAZY)
@@ -122,6 +123,15 @@ public class OntoChange  implements java.io.Serializable {
     
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    @Column(name="change_axiom", length=256)
+    public String getChangeAxiom() {
+        return changeAxiom;
+    }
+
+    public void setChangeAxiom(String changeAxiom) {
+        this.changeAxiom = changeAxiom;
     }
 
     @Column(name="concept", length=256)

@@ -142,7 +142,7 @@ public class UtilMethods {
         RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(),axiom);
         Init.getManager().applyChange(removeAxiom);
         String reason = checkConsistency(Init.getOntology(), Init.getManager());
-        if (UtilMethods.consistent == 0) {
+        if (consistent == 0) {
             AddAxiom addAxiom = new AddAxiom(Init.getOntology(),axiom);
             Init.getManager().applyChange(addAxiom);
         }else{
@@ -157,7 +157,7 @@ public class UtilMethods {
         AddAxiom addAxiom = new AddAxiom(Init.getOntology(),axiom);
         Init.getManager().applyChange(addAxiom);
         String reason = checkConsistency(Init.getOntology(), Init.getManager());
-        if (UtilMethods.consistent == 0) {
+        if (consistent == 0) {
             RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(),axiom);;
             Init.getManager().applyChange(removeAxiom);
         }else{

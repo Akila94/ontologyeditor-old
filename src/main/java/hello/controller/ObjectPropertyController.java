@@ -3,11 +3,17 @@ package hello.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import hello.bean.Pattern;
 import hello.bean.TreeNode;
+import hello.service.DBService;
 import hello.service.ObjectPropertyService;
+import hello.util.UtilMethods;
 import org.semanticweb.owlapi.model.OWLException;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyStorageException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
@@ -18,6 +24,10 @@ import java.util.List;
 
 @Controller
 public class ObjectPropertyController {
+
+    @Autowired
+    DBService dbService;
+
     @RequestMapping("/objectPropertyDetail/{property}")
     public String getObjectPropertyHierarchy(@PathVariable String property, Model model, HttpSession session) throws OWLException {
         if(property==null){
@@ -71,6 +81,9 @@ public class ObjectPropertyController {
     @PostMapping("/addNewOProperty")
     public ResponseEntity<?> addObjectProperty(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         String result;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+
 
         if(pattern.getClassList().contains("S") && pattern.getClassList().contains("AS")){
             result = "a property can't be symmetric and asymmetric at the same time";
@@ -99,41 +112,78 @@ public class ObjectPropertyController {
         ObjectPropertyService objectPropertyService = new ObjectPropertyService();
         if(pattern.getoProperties().get(0).equals("topObjectProperty")){
             result = objectPropertyService.addOProperty(pattern.getCurrentClass());
+
+        if(UtilMethods.consistent==1){
+            dbService.addObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
         }else{
             result = objectPropertyService.addSubOProperty(pattern.getCurrentClass(),pattern.getoProperties().get(0));
+            if(UtilMethods.consistent==1){
+                dbService.addObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+            }
         }
 
         for(String s:pattern.getClassList()){
             if(s.equals("F")){
                 result = objectPropertyService.addFunctionalProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else if(s.equals("IF")){
                 result = objectPropertyService.addInverseFunctionalProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else if(s.equals("T")){
                 result = objectPropertyService.addTransitiveProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else if(s.equals("S")){
                 result = objectPropertyService.addSymmetricProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else if(s.equals("AS")){
                 result = objectPropertyService.addAsymmetricProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else if(s.equals("R")){
                 result = objectPropertyService.addReflexiveProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = objectPropertyService.addIreflexiveProperty(pattern.getCurrentClass());
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }
         }
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/editCharacteristics")
-    public ResponseEntity<?> editOPCharacteristics(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        System.out.println(pattern.getCurrentClass());
+    public ResponseEntity<?> editOPCharacteristics(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService ops = new ObjectPropertyService();
         String result = null;
         String prop = (String)session.getAttribute("currentOP");
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+
         if(pattern.getCurrentClass().equals("F")){
             if(ops.isFunctional(prop)){
                 result = ops.removeFunctionalProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addFunctionalProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
 
             }
             return  ResponseEntity.ok(result);
@@ -141,8 +191,14 @@ public class ObjectPropertyController {
         if(pattern.getCurrentClass().equals("IF")){
             if(ops.isInverseFunctional(prop)){
                 result = ops.removeInverseFunctionalProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addInverseFunctionalProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
 
             }
             return  ResponseEntity.ok(result);
@@ -150,49 +206,85 @@ public class ObjectPropertyController {
         if(pattern.getCurrentClass().equals("T")){
             if(ops.isTransitive(prop)){
                 result = ops.removeTransitiveProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addTransitiveProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }
             return  ResponseEntity.ok(result);
         }
         if(pattern.getCurrentClass().equals("S")){
             if(ops.isSymmetric(prop)){
                 result = ops.removeSymetricProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addSymmetricProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }
             return  ResponseEntity.ok(result);
         }
         if(pattern.getCurrentClass().equals("AS")){
             if(ops.isAsymmetric(prop)){
                 result = ops.removeAsymetricProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addAsymmetricProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }
             return  ResponseEntity.ok(result);
         }
         if(pattern.getCurrentClass().equals("R")){
             if(ops.isReflexive(prop)){
                 result = ops.removeReflexiveProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addReflexiveProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }
             return  ResponseEntity.ok(result);
         }
         if(pattern.getCurrentClass().equals("IR")){
             if(ops.isIrreflexive(prop)){
                 result = ops.removeIreflexiveProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.removeAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }else{
                 result = ops.addIreflexiveProperty(prop);
+                if(UtilMethods.consistent==1){
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                }
             }
             return  ResponseEntity.ok(result);
         }
         return  ResponseEntity.ok(result);
     }
 
-    @GetMapping("removeOProperty")
-    public ResponseEntity<?> removeOProperty(HttpSession session) throws OWLOntologyStorageException, OWLOntologyCreationException {
+    @GetMapping("/removeOProperty")
+    public ResponseEntity<?> removeOProperty(@ModelAttribute Pattern pattern,HttpSession session) throws OWLOntologyStorageException, OWLOntologyCreationException {
         String result = new ObjectPropertyService().removeOProperty((String) session.getAttribute("currentOP"));
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
         session.setAttribute("currentOP","topObjectProperty");
         return ResponseEntity.ok(result);
     }
@@ -201,12 +293,26 @@ public class ObjectPropertyController {
         System.out.println(pattern);
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.addInverseProperty((String) session.getAttribute("currentOP"),pattern.getoProperties().get(0));
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
+
         return ResponseEntity.ok(result);
     }
-    @PostMapping("/removeIOProperty")
+    @GetMapping("/removeIOProperty")
     public ResponseEntity<?> addIObjectProperty(Model model, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.removeInverseProperty((String) session.getAttribute("currentOP"));
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),1);
+        }
+
         return ResponseEntity.ok(result);
     }
 
@@ -215,12 +321,23 @@ public class ObjectPropertyController {
     public ResponseEntity<?> addOPropertyRange(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result= oPService.addRange((String) session.getAttribute("currentOP"),pattern.getClassList().get(0));
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
         return ResponseEntity.ok(result);
     }
-    @PostMapping("/removeOPropertyRange")
-    public ResponseEntity<?> removeOPropertyRange(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    @GetMapping("/removeOPropertyRange/{property}")
+    public ResponseEntity<?> removeOPropertyRange(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
-        String result= oPService.removeRange((String) session.getAttribute("currentOP"),pattern.getClassList().get(0));
+        String result= oPService.removeRange((String) session.getAttribute("currentOP"),property);
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
         return ResponseEntity.ok(result);
     }
 
@@ -228,12 +345,26 @@ public class ObjectPropertyController {
     public ResponseEntity<?> addOPropertyDomain(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.addDomain((String) session.getAttribute("currentOP"),pattern.getClassList().get(0));
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
+
         return ResponseEntity.ok(result);
     }
-    @PostMapping("/removeOPropertyDomain")
-    public ResponseEntity<?> removeOPropertyDomain(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    @GetMapping("/removeOPropertyDomain/{property}")
+    public ResponseEntity<?> removeOPropertyDomain(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
-        String result = oPService.removeDomain((String) session.getAttribute("currentOP"),pattern.getClassList().get(0));
+        String result = oPService.removeDomain((String) session.getAttribute("currentOP"),property);
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),pattern.getDescription(),1);
+        }
+
         return ResponseEntity.ok(result);
     }
 
@@ -253,13 +384,27 @@ public class ObjectPropertyController {
         for(String s:pattern.getoProperties()){
             result = oPService.addDisOProperty((String) session.getAttribute("currentOP"),s);
         }
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+        }
+
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/removeDisOProperty")
-    public ResponseEntity<?> removeDisObjectProperty(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    @GetMapping("/removeDisOProperty/{property}")
+    public ResponseEntity<?> removeDisObjectProperty(@PathVariable String property,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
-        String result = oPService.removeDisOProperty((String) session.getAttribute("currentOP"),pattern.getoProperties().get(0));
+        String result = oPService.removeDisOProperty((String) session.getAttribute("currentOP"),property);
+
+        if(UtilMethods.consistent==1){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),pattern.getDescription(),1);
+        }
+
         return ResponseEntity.ok(result);
     }
 

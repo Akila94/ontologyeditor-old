@@ -73,9 +73,9 @@ svg{
 
 }
 .glyphicon-remove-circle,.glyphicon-pencil{
-    color: red;
+    color: #ff9780;
     font-size: 30px;
-    margin-top: -12px;
+    margin-top: -6px;
 }
 
 li form{

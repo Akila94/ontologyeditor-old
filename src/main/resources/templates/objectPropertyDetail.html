@@ -18,18 +18,15 @@
             <div id="tree"></div>
         </div>
         <div class="col-sm-9 tree well well-sm" th:if="${session.currentOP} != 'topObjectProperty'">
-            <div class="panel panel-primary">
+            <div class="panel panel-success">
                 <div class="panel-heading">Property
-                    <form th:action="@{/removeOProperty}" method="get" name="addForm">
-                        <button style="display: inline" type="submit" class="btn btn-link pull-right"><span class="glyphicon glyphicon-remove-circle fa-lg "/></button>
-                    </form>
-
+                    <a href="#" onclick="changeAction('/removeOProperty');" data-toggle="modal" data-target="#deleteForm"><span class="glyphicon glyphicon-remove-circle fa-lg pull-right"/></a>
                 </div>
                 <div class="panel-body">
                     <p th:text="${session.currentOP}"></p></div>
             </div>
 
-            <div class="panel panel-primary" name="cats">
+            <div class="panel panel-success" name="cats">
                 <div class="panel-heading" >Characteristics </div>
                 <div class="list-group">
                     <div class="list-group-item"><label><input type="checkbox" disabled="disabled" value="F"/>Functional</label>
@@ -77,12 +74,11 @@
                 </div>
             </div>
 
-            <div class="panel panel-primary">
+            <div class="panel panel-success">
                 <div class="panel-heading">Inverse Property
                     <a onclick="loadPropertyData()" th:if="${oPInverse} == null" href="#" data-toggle="modal" data-target="#addIOProperty" ><span class="glyphicon glyphicon-plus-sign fa-lg pull-right"/></a>
-                    <form th:if="${oPInverse} != null" action="#" th:action="@{/removeIOProperty}" method="post" name="addForm">
-                        <button type="submit" class="btn btn-link pull-right" name="delete"><span class="glyphicon glyphicon-remove-circle fa-lg "/></button>
-                    </form>
+
+                    <a href="#" th:if="${oPInverse} != null" onclick="changeAction('/removeIOProperty');" data-toggle="modal" data-target="#deleteForm"><span class="glyphicon glyphicon-remove-circle fa-lg pull-right"/></a>
                 </div>
                 <div class="panel-body">
                     <p th:text="${oPInverse}"></p>
@@ -90,7 +86,7 @@
                 </div>
             </div>
 
-            <div class="panel panel-primary">
+            <div class="panel panel-success">
                 <div class="panel-heading">Disjoint Properties
                     <a onclick="loadNonDisjoint()" href="#" data-toggle="modal" data-target="#addDisOProperty" ><span class="glyphicon glyphicon-plus-sign fa-lg pull-right"/></a>
                 </div>
@@ -98,16 +94,14 @@
                     <ul class="list-group" >
                         <li class="list-group-item" th:each="item : ${disjointOP}">
                             <span th:text="${item}">Grrr!!!</span>
-                            <form action="#" name="addForm" th:action="@{/removeDisOProperty}" th:object="${pattern}" method="post">
-                                <input type="hidden" th:value="${item}" name="oProperties"/>
-                                <button type="submit" class="btn btn-link pull-right" name="delete"><span class="glyphicon glyphicon-remove-circle fa-lg "/></button>
-                            </form>
+                            <a href="#" th:onclick="'javascript:changeAction(\'/removeDisOProperty/'+${item}+'\');'" data-toggle="modal" data-target="#deleteForm"><span class="glyphicon glyphicon-remove-circle fa-lg pull-right"/></a>
+
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <div class="panel panel-primary">
+            <div class="panel panel-success">
                 <div class="panel-heading">Property Domains
                     <a onclick="getClassList()" href="#" data-toggle="modal" data-target="#addOPropertyDomain" ><span class="glyphicon glyphicon-plus-sign fa-lg pull-right"/></a>
                 </div>
@@ -115,15 +109,12 @@
                     <ul class="list-group" >
                         <li class="list-group-item" th:each="item : ${domainOP}">
                             <span th:text="${item}">Grrr!!!</span>
-                            <form action="#" name="addForm" th:action="@{/removeOPropertyDomain}" th:object="${pattern}" method="post">
-                                <input type="hidden" th:value="${item}" name="classList"/>
-                                <button type="submit" class="btn btn-link pull-right" name="delete"><span class="glyphicon glyphicon-remove-circle fa-lg "/></button>
-                            </form>
+                            <a href="#" th:onclick="'javascript:changeAction(\'/removeOPropertyDomain/'+${item}+'\');'" data-toggle="modal" data-target="#deleteForm"><span class="glyphicon glyphicon-remove-circle fa-lg pull-right"/></a>
                         </li>
                     </ul>
                 </div>
             </div>
-            <div class="panel panel-primary">
+            <div class="panel panel-success">
                 <div class="panel-heading">Property Ranges
                     <a onclick="getClassList()" href="#" data-toggle="modal" data-target="#addOPropertyRange" ><span class="glyphicon glyphicon-plus-sign fa-lg pull-right"/></a>
                 </div>
@@ -131,10 +122,8 @@
                     <ul class="list-group" >
                         <li class="list-group-item" th:each="item : ${rangeOP}">
                             <span th:text="${item}">Grrr!!!</span>
-                            <form action="#" name="addForm" th:action="@{/removeOPropertyRange}" th:object="${pattern}" method="post">
-                                <input type="hidden" th:value="${item}" name="classList"/>
-                                <button type="submit" class="btn btn-link pull-right" name="delete"><span class="glyphicon glyphicon-remove-circle fa-lg "/></button>
-                            </form>
+                            <a href="#" th:onclick="'javascript:changeAction(\'/removeOPropertyRange/'+${item}+'\');'" data-toggle="modal" data-target="#deleteForm"><span class="glyphicon glyphicon-remove-circle fa-lg pull-right"/></a>
+
                         </li>
                     </ul>
                 </div>
@@ -343,6 +332,26 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteForm">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body" style="padding:40px 50px;">
+            <!--/*@thymesVar id="pattern" type="hello.bean.Pattern"*/-->
+            <form action="#" th:object="${pattern}" method="get" name="addForm">
+                <input type="hidden" value="0"/>
+                <div class="form-group">
+                    <label>State the Reason For Deletion</label>
+                    <textarea class="form-control" rows="5" th:field="*{description}" required="required"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-danger btn-block"> Remove </button>
+                </div>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script type="text/javascript" src="../webjars/jquery/2.2.4/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 <script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js" ></script>
@@ -402,17 +411,22 @@
                 type: form.attr("method"),
                 data: form.serialize(),
                 success: function(result){
-                    if(result.indexOf("PASSED")>-1){
-                        $.notify("Success: "+ result, "success");
+                    if((result.indexOf("PASSED")>-1) || (result.indexOf("Property Deleted")>-1)){
+                        $.notify("Success: " + result, "success");
                     }else{
-                        $.notify("Failed: "+result,"error" );
+                        $.notify("Failed: " + result, "error" );
                     }
 
-                    if(result.indexOf("Property Deleted")>-1){
-                        window.location='/objectPropertyDetail/topObjectProperty';
-                    }else{
-                        location.reload(true);
-                    }
+
+                    setTimeout(
+                        function()
+                        {
+                            if(result.indexOf("Property Deleted")>-1){
+                                window.location='/objectPropertyDetail/topObjectProperty';
+                            }else{
+                                location.reload(true);
+                            }
+                        }, 2000);
 
 
                 },
@@ -534,6 +548,10 @@
                 });
             }
         });
+    }
+
+    function changeAction(url){
+        $("#deleteForm").find("form").attr("action",url);
     }
 </script>
 </body>

@@ -84,9 +84,8 @@ public class DataPropertyService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        OWLDeclarationAxiom axiom = Init.getFactory().getOWLDeclarationAxiom(property);
-        UtilMethods.removeAxiom(axiom);
-        return "PASSED: Property Deleted";
+        UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
+        return "Property Deleted";
     }
 
     public List<String> getAllDProperties(){

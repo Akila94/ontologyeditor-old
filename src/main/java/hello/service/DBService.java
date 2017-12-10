@@ -5,7 +5,6 @@ import hello.bean.MainChanges;
 import hello.bean.mode.*;
 import hello.service.dbRepo.*;
 import hello.util.UtilMethods;
-import hello.util.Variables;
 import org.semanticweb.owlapi.model.OWLAnnotation;
 import org.semanticweb.owlapi.model.OWLAxiom;
 import org.semanticweb.owlapi.model.OWLNamedIndividual;
@@ -42,17 +41,11 @@ public class DBService {
     @Autowired
     private ChangeAnnotationRepository changeAnnotationRepository;
 
-    public void addOrRemoveClass(String clz, String author, String des,int t){
-        String cType;
-        if(t==1){
-            cType="Class Added: ";
-        }else{
-           cType="Class Removed: ";
-        }
+    public void removeClass(String clz, String author, String des,int vId){
         User u = userRepository.findUserByName(author);
-        ChangeType type = changeTypeRepository.findChangeTypeById(t);
+        ChangeType type = changeTypeRepository.findChangeTypeById(2);
         ChangeOn changeOn = changeOnRepository.findChangeOnById(1);
-        OntoVersion version = ontoVersionRepository.findOntoVersionById(1);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
 
         OntoChange ontoChange = new OntoChange();
         ontoChange.setUser(u);
@@ -61,14 +54,197 @@ public class DBService {
         ontoChange.setOntoVersion(version);
         ontoChange.setDescription(des);
         ontoChange.setConcept(clz);
+        ontoChange.setChangeAxiom("Declaration "+ clz);
         ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
 
         ontoChangeRepository.save(ontoChange);
+        saveAllAxioms(ontoChange);
+
+    }
+
+    public void addNewClass(String clz, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(1);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(1);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(clz);
+        ontoChange.setChangeAxiom(UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)));
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+        ontoChangeRepository.save(ontoChange);
+
+        saveAllAxioms(ontoChange);
+    }
+
+    public void addObjectProperty(String prop, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(1);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(2);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(prop);
+        ontoChange.setChangeAxiom(UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)));
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+        ontoChangeRepository.save(ontoChange);
+
+        saveAllAxioms(ontoChange);
+
+
+    }
+
+    public void removeObjectProperty(String clz, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(2);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(2);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(clz);
+        ontoChange.setChangeAxiom("Declaration "+ clz);
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+
+        ontoChangeRepository.save(ontoChange);
+        saveAllAxioms(ontoChange);
+
+    }
+
+    public void addDataProperty(String prop, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(1);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(3);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(prop);
+        ontoChange.setChangeAxiom(UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)));
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+        ontoChangeRepository.save(ontoChange);
+        saveAllAxioms(ontoChange);
+
+
+    }
+
+    public void removeDataProperty(String clz, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(2);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(3);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(clz);
+        ontoChange.setChangeAxiom("Declaration "+ clz);
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+
+        ontoChangeRepository.save(ontoChange);
+        saveAllAxioms(ontoChange);
+
+    }
+
+    public void addAxiom(String prop, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(1);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(4);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(prop);
+        ontoChange.setChangeAxiom(UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)));
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+        ontoChangeRepository.save(ontoChange);
+
+        saveAllAxioms(ontoChange);
+
+    }
+
+    public void removeAxiom(String clz, String author, String des,int vId){
+        User u = userRepository.findUserByName(author);
+        ChangeType type = changeTypeRepository.findChangeTypeById(2);
+        ChangeOn changeOn = changeOnRepository.findChangeOnById(4);
+        OntoVersion version = ontoVersionRepository.findOntoVersionById(vId);
+
+        OntoChange ontoChange = new OntoChange();
+        ontoChange.setUser(u);
+        ontoChange.setChangeType(type);
+        ontoChange.setChangeOn(changeOn);
+        ontoChange.setOntoVersion(version);
+        ontoChange.setDescription(des);
+        ontoChange.setConcept(clz);
+        ontoChange.setChangeAxiom(UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)));
+        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
+
+        ontoChangeRepository.save(ontoChange);
+        saveAllAxioms(ontoChange);
+
+    }
+
+    public List<MainChangeCol> getAllChanges(){
+        MainChanges changes = new MainChanges();
+        List<MainChangeCol> mainChangeCols = new ArrayList<>();
+
+        Set<OntoChange> ontoChanges =  ontoChangeRepository.findAll();
+
+        for(OntoChange ontoChange:ontoChanges){
+            MainChangeCol cols = new MainChangeCol();
+            cols.setId(ontoChange.getId());
+            cols.setChangeType(ontoChange.getChangeType().getDescription());
+            cols.setDescription(ontoChange.getDescription());
+            cols.setAuthor(ontoChange.getUser().getName());
+            cols.setVersion(ontoChange.getOntoVersion().getName());
+            cols.setTime(ontoChange.getTimestamp().toString());
+            cols.setConcept(ontoChange.getConcept());
+            cols.setChangeOn(ontoChange.getChangeAxiom());
+            mainChangeCols.add(cols);
+        }
+        changes.setRowCount(ontoChanges.size());
+        changes.setRows(mainChangeCols);
+        return mainChangeCols;
+    }
+
+    public File getOntologyByVersion(int main,int sub, int change){
+        OntoVersion version = ontoVersionRepository.findOntoVersionByMainVersionAndSubVersionAndChangeVersion(main,sub,change);
+        ClassLoader classLoader = getClass().getClassLoader();
+        System.out.println(version.getLocation());
+        return new File(classLoader.getResource(version.getLocation()).getFile());
+    }
+
+    private void saveAllAxioms(OntoChange ontoChange){
         if(UtilMethods.axiomsQueue!=null){
             for(OWLAxiom axiom:UtilMethods.axiomsQueue){
                 ChangeDes changeDes = new ChangeDes();
                 changeDes.setOntoChange(ontoChange);
-                changeDes.setDescription(cType+UtilMethods.manchesterExplainer(axiom));
+                changeDes.setDescription(UtilMethods.manchesterExplainer(axiom));
                 changeDes.setObject(UtilMethods.toByts(axiom));
                 changeDesRepository.save(changeDes);
 
@@ -80,7 +256,7 @@ public class DBService {
                 ChangeInstances instances= new ChangeInstances();
                 instances.setOntoChange(ontoChange);
                 instances.setObject(UtilMethods.toByts(i));
-                instances.setDescription(i.getIRI().getShortForm()+ " "+cType);
+                instances.setDescription(i.getIRI().getShortForm());
 
                 changeInstancesRepository.save(instances);
             }
@@ -97,54 +273,5 @@ public class DBService {
                 changeAnnotationRepository.save(changeAnnotation);
             }
         }
-
-    }
-
-    public void addObjectProperty(String prop, String author, String des){
-        User u = userRepository.findUserByName(author);
-        ChangeType type = changeTypeRepository.findChangeTypeById(1);
-        ChangeOn changeOn = changeOnRepository.findChangeOnById(2);
-        OntoVersion version = ontoVersionRepository.findOntoVersionById(1);
-
-        OntoChange ontoChange = new OntoChange();
-        ontoChange.setUser(u);
-        ontoChange.setChangeType(type);
-        ontoChange.setChangeOn(changeOn);
-        ontoChange.setOntoVersion(version);
-        ontoChange.setDescription(des);
-        ontoChange.setConcept(prop);
-        ontoChange.setTimestamp(new Timestamp(System.currentTimeMillis()));
-
-
-    }
-
-
-    public List<MainChangeCol> getAllChanges(){
-        MainChanges changes = new MainChanges();
-        List<MainChangeCol> mainChangeCols = new ArrayList<>();
-
-        Set<OntoChange> ontoChanges =  ontoChangeRepository.findAll();
-
-        for(OntoChange ontoChange:ontoChanges){
-            MainChangeCol cols = new MainChangeCol();
-            cols.setId(ontoChange.getId());
-            cols.setChangeType(ontoChange.getChangeType().getDescription());
-            cols.setDescription(ontoChange.getDescription());
-            cols.setAuthor(ontoChange.getUser().getName());
-            cols.setVersion(ontoChange.getOntoVersion().getName());
-            cols.setTime(ontoChange.getTimestamp().toString());
-            cols.setChangeOn(ontoChange.getConcept());
-            mainChangeCols.add(cols);
-        }
-        changes.setRowCount(ontoChanges.size());
-        changes.setRows(mainChangeCols);
-        return mainChangeCols;
-    }
-
-    public File getOntologyByVersion(int main,int sub, int change){
-        OntoVersion version = ontoVersionRepository.findOntoVersionByMainVersionAndSubVersionAndChangeVersion(main,sub,change);
-        ClassLoader classLoader = getClass().getClassLoader();
-        System.out.println(version.getLocation());
-        return new File(classLoader.getResource(version.getLocation()).getFile());
     }
 }

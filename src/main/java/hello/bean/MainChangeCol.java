@@ -2,6 +2,7 @@ package hello.bean;
 
 public class MainChangeCol {
     private int id;
+    private String concept;
     private String changeOn;
     private String changeType;
     private String description;
@@ -20,12 +21,12 @@ public class MainChangeCol {
         this.id = id;
     }
 
-    public String getChangeOn() {
-        return changeOn;
+    public String getConcept() {
+        return concept;
     }
 
-    public void setChangeOn(String changeOn) {
-        this.changeOn = changeOn;
+    public void setConcept(String concept) {
+        this.concept = concept;
     }
 
     public String getChangeType() {
@@ -66,5 +67,13 @@ public class MainChangeCol {
 
     public void setTime(String time) {
         this.time = time;
+    }
+
+    public String getChangeOn() {
+        return changeOn;
+    }
+
+    public void setChangeOn(String changeOn) {
+        this.changeOn = changeOn;
     }
 }

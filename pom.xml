@@ -59,11 +59,7 @@
             <artifactId>bootstrap</artifactId>
             <version>3.3.7</version>
         </dependency>
-        <dependency>
-            <groupId>net.sourceforge.owlapi</groupId>
-            <artifactId>owlapi-distribution</artifactId>
-            <version>4.3.1</version>
-        </dependency>
+
         <dependency>
             <groupId>net.minidev</groupId>
             <artifactId>json-smart</artifactId>
