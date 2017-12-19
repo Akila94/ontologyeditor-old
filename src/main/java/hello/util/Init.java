@@ -1,6 +1,8 @@
 package hello.util;
 
+import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory;
+import com.hp.hpl.jena.reasoner.Reasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.OWLDataFactory;
 import org.semanticweb.owlapi.model.OWLOntology;
@@ -15,21 +17,27 @@ import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
  * Created by Lotus on 9/9/2017.
  */
 public class Init {
-    private final static OWLOntologyManager manager= OWLManager.createOWLOntologyManager();
-    private static OWLOntology ontology ;
+    private final static OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+    private static OWLOntology ontology;
     private static OWLReasonerFactory owlReasonerFactory;
+    private static OWLReasonerFactory pelletReasonerFactory;
     private static OWLReasoner reasoner;
-    private final static OWLDataFactory factory= OWLManager.getOWLDataFactory();
+    private final static OWLDataFactory factory = OWLManager.getOWLDataFactory();
+    private static PelletReasoner pelletReasoner;
 
 
     static {
-        try{
+        try {
             UtilMethods untiles = new UtilMethods();
-            if(ontology==null) {
+            if (ontology == null) {
                 ontology = untiles.loadOntology(manager, Variables.ontoPath);
             }
-            if(owlReasonerFactory==null) {
+            if (owlReasonerFactory == null) {
                 owlReasonerFactory = new StructuralReasonerFactory();
+            }
+            if (pelletReasoner == null) {
+               pelletReasoner = PelletReasonerFactory.getInstance().createNonBufferingReasoner( ontology );
+               manager.addOntologyChangeListener( pelletReasoner );
             }
         } catch (OWLOntologyCreationException e) {
             e.printStackTrace();
@@ -62,9 +70,9 @@ public class Init {
     }
 
     public static OWLReasonerFactory getOwlReasonerFactory(String type) {
-        if(type==Variables.STRUCTURAL){
+        if (type == Variables.STRUCTURAL) {
             owlReasonerFactory = new StructuralReasonerFactory();
-        } else if(type==Variables.Pellet){
+        } else if (type == Variables.Pellet) {
             owlReasonerFactory = new PelletReasonerFactory();
         }
         return owlReasonerFactory;
@@ -74,4 +82,9 @@ public class Init {
         reasoner = getOwlReasonerFactory(type).createNonBufferingReasoner(ontology);
         return reasoner;
     }
+
+    public static PelletReasoner getPelletReasoner(){
+        return pelletReasoner;
+    }
 }
+

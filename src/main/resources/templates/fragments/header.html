@@ -20,8 +20,14 @@
                         <a th:href="@{/dataPropertyDetail/} + ${session.currentDP}">Data Properties</a>
                     </li>
                     <li th:classappend="${module == 'versionInfo' ? 'active' : ''}">
-                        <a th:href="@{/version}">Version</a>
+                        <a th:href="@{/version}">Version Management</a>
                     </li>
+                    <li th:classappend="${module == 'change' ? 'active' : ''}">
+                        <a th:href="@{/change}">Change Management</a>
+                    </li>
+                    <!--<li th:classappend="${module == 'user' ? 'active' : ''}">-->
+                        <!--<a th:href="@{/userManagement}">User Management</a>-->
+                    <!--</li>-->
 
                 </ul>
                 <ul class="nav navbar-nav navbar-right">

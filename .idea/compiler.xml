@@ -6,12 +6,14 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="complete" />
+        <module name="gs-serving-web-content" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
       <module name="complete" target="1.8" />
       <module name="gs-serving-web-content" target="1.8" />
+      <module name="gs-serving-web-content (1)" target="1.8" />
+      <module name="gs-serving-web-content (2)" target="1.8" />
       <module name="ontologyeditor_main" target="1.8" />
       <module name="ontologyeditor_test" target="1.8" />
     </bytecodeTargetLevel>

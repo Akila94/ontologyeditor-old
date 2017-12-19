@@ -14,7 +14,12 @@
 <div class="container">
     <div class="row">
         <div class="col-sm-3 tree well well-sm">
-            <h4>Data Property Hierarchy<a href="#" onclick="loadPropertyData()" data-toggle="modal" data-target="#addDProperty" id="addBtn"><span class="glyphicon glyphicon-plus fa-md "/></a></h4>
+            <h4>Data Property Hierarchy
+                <a href="#"  data-toggle="modal" data-target="#addDProperty" id="addBtn"><span class="glyphicon glyphicon-plus fa-md "/></a>
+                <form th:if="${undo}" action="/undo"  method="get" name="addForm">
+                    <button type="submit" class="btn btn-link"> <span class="glyphicon glyphicon-repeat"/></button>
+                </form>
+            </h4>
             <div id="tree"></div>
         </div>
         <div class="col-sm-9 tree well well-sm" th:if="${session.currentDP} != 'topDataProperty'">
@@ -312,7 +317,7 @@
                 type: form.attr("method"),
                 data: form.serialize(),
                 success: function(result){
-                    if((result.indexOf("PASSED")>-1)||(result.indexOf("Property Deleted")>-1)){
+                    if((result.indexOf("PASSED")>-1)||(result.indexOf("Property Deleted")>-1||(result.indexOf("Undo Success"))>-1)){
                         $.notify("Success: " + result, "success");
                     }else{
                         $.notify("Failed: " + result, "error" );
@@ -338,11 +343,11 @@
 
             });
         });
+        loadPropertyData();
 
     });
 
     function loadPropertyData() {
-        $('#dp1').empty();
         $.ajax({
             url: '/getDataProperties',
             type: 'get',
@@ -354,6 +359,7 @@
                 });
             }
         });
+
 
     }
     function getClassList(){

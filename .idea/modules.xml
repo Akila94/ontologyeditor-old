@@ -2,10 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/complete.iml" filepath="$PROJECT_DIR$/.idea/modules/complete.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ontologyeditor.iml" filepath="$PROJECT_DIR$/.idea/modules/ontologyeditor.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ontologyeditor_main.iml" filepath="$PROJECT_DIR$/.idea/modules/ontologyeditor_main.iml" group="ontologyeditor" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/ontologyeditor_test.iml" filepath="$PROJECT_DIR$/.idea/modules/ontologyeditor_test.iml" group="ontologyeditor" />
+      <module fileurl="file://$PROJECT_DIR$/gs-serving-web-content.iml" filepath="$PROJECT_DIR$/gs-serving-web-content.iml" />
     </modules>
   </component>
 </project>

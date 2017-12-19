@@ -1,7 +1,13 @@
 package hello.controller;
 
+import hello.service.DBService;
 import hello.service.OntologyService;
 import hello.util.Init;
+import hello.util.Variables;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -10,6 +16,8 @@ import javax.servlet.http.HttpSession;
 
 @Controller
 public class HomeController {
+    @Autowired
+    DBService dbService;
 
     @RequestMapping("/")
     public String greeting(Model model, HttpSession session) {
@@ -23,6 +31,14 @@ public class HomeController {
             session.setAttribute("currentOP","topObjectProperty");
         }
 
+        if(Variables.version==null){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            Variables.version = dbService.getUserCurrentVersion(user.getUsername());
+            Variables.ontoPath=Variables.version.getLocation();
+            session.setAttribute("versionSet",true);
+        }
+
         Init init = new Init();
         OntologyService info = new OntologyService();
         model.addAttribute("module", "home");
@@ -31,6 +47,9 @@ public class HomeController {
         model.addAttribute("version",info.getOntologyVersion(init.getOntology()));
         model.addAttribute("description",info.getDescription(init.getOntology()));
         model.addAttribute("contributors",info.getContributors(init.getOntology()));
+
+
+
         return "home";
     }
 

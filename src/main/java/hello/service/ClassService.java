@@ -1,6 +1,7 @@
 package hello.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import hello.bean.ChangeKeeper;
 import hello.bean.ClassAxiom;
 import hello.bean.Pattern;
 import hello.bean.TreeNode;
@@ -28,18 +29,12 @@ public class ClassService {
 
     private TreeNode classTree = null;
 
-
-
     public ClassService() {
     }
-
 
     public TreeNode printHierarchy(OWLClass clazz) throws OWLException {
         printHierarchy(Init.getReasoner(Variables.STRUCTURAL), clazz, 0);
         for (OWLClass cl : Init.getOntology().getClassesInSignature()) {
-            if (!Init.getReasoner(Variables.STRUCTURAL).isSatisfiable(cl)) {
-                //  System.out.println("XXX: " + cl.getIRI().toString());
-            }
         }
         return classTree;
      }
@@ -117,7 +112,6 @@ public class ClassService {
 
         OWLEntity entity = Init.getFactory().getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI, className));
         OWLAxiom declare = Init.getFactory().getOWLDeclarationAxiom(entity);
-
         return UtilMethods.addAxiom(declare);
     }
 
@@ -135,14 +129,30 @@ public class ClassService {
 
         UtilMethods.axiomsQueue = new ArrayList<>();
         UtilMethods.axiomsQueue.addAll(toRemove);
+        int index=0;
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            if(UtilMethods.manchesterExplainer(a).contains( "Class:")){
+                Collections.swap(UtilMethods.axiomsQueue,UtilMethods.axiomsQueue.indexOf(a),index);
+                index++;
+            }
+        }
+
+        ChangeKeeper changeKeeper = new ChangeKeeper();
+        List<OWLAxiomChange> changes = new ArrayList<>();
+
+        changeKeeper.setChangeQueue(changes);
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            changes.add(new AddAxiom(Init.getOntology(),a));
+        }
+        UtilMethods.changeQueue.add(changeKeeper);
+
+
         UtilMethods.removedInstances = Init.getReasoner(Variables.Pellet).getInstances(owlClass,true).getFlattened();
-
-
         UtilMethods.removedAnnotations = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(owlClass, Init.getOntology());
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
+        UtilMethods.checkConsistency(Init.getOntology());
         return "Class Deleted";
     }
 
@@ -151,120 +161,152 @@ public class ClassService {
         OWLAxiom axiom ;
         OWLClass childC = Init.getFactory().getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI,ptrn.getCurrentClass() ));
         OWLClass parent=getParent(childC);
-        //a is sub class of b
-        if(ptrn.getPatternType().equals("o1")){
-            OWLClass parentC = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI, ptrn.getClassList().get(0)));
-            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, parentC);
-            if(cOrEq==1){
-                if(parent!=null){
-                    OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,parentC);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
+
+        switch (ptrn.getPatternType()) {
+            case "o1":
+                OWLClass parentC = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI, ptrn.getClassList().get(0)));
+
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent, parentC);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, parentC);
+                    }
                 }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,parentC);
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, parentC);
                 }
-            }
 
-        }else if(ptrn.getPatternType().equals("o2")){
-            Set<OWLClass> owlClasses = new HashSet<>();
-            for(String s:ptrn.getClassList()){
-                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
-            }
-            OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
-            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, unionOf);
-            if(cOrEq==1){
-                if(parent!=null){
-                    OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,unionOf);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
+                break;
+            case "o2": {
+                Set<OWLClass> owlClasses = new HashSet<>();
+                for (String s : ptrn.getClassList()) {
+                    owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI + s)));
+                }
+                OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
+
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent, unionOf);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, unionOf);
+                    }
                 }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,unionOf);
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, unionOf);
                 }
+                break;
             }
-        }else if(ptrn.getPatternType().equals("o3")){
-            Set<OWLClass> owlClasses = new HashSet<>();
-            for(String s:ptrn.getClassList()){
-                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
-            }
-            OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(owlClasses);
-            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, intersectionOf);
+            case "o3": {
+                Set<OWLClass> owlClasses = new HashSet<>();
+                for (String s : ptrn.getClassList()) {
+                    owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI + s)));
+                }
+                OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(owlClasses);
 
-            if(cOrEq==1){
-                if(parent!=null){
-                    owlClasses.add(parent);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,parent);
+
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        owlClasses.add(parent);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, parent);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+
+                    }
                 }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, intersectionOf);
                 }
+                System.out.println(axiom);
+                break;
             }
-        }else if(ptrn.getPatternType().equals("o4")){
-            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            OWLClass owlClass = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+ptrn.getClassList().get(0)));
-            OWLObjectSomeValuesFrom someValuesFrom= Init.getFactory().getOWLObjectSomeValuesFrom(property,owlClass);
-            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,someValuesFrom);
+            case "o4": {
+                OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI + ptrn.getoProperties().get(0)));
+                OWLClass owlClass = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI + ptrn.getClassList().get(0)));
+                OWLObjectSomeValuesFrom someValuesFrom = Init.getFactory().getOWLObjectSomeValuesFrom(property, owlClass);
 
-            if(cOrEq==1){
-                if(parent!=null){
-                    OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,someValuesFrom);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
+
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent, someValuesFrom);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, someValuesFrom);
+                    }
                 }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,someValuesFrom);
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, someValuesFrom);
                 }
+
+                break;
             }
+            case "o5": {
+                OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI + ptrn.getoProperties().get(0)));
+                Set<OWLClass> owlClasses = new HashSet<>();
+                for (String s : ptrn.getClassList()) {
+                    owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI + s)));
+                }
+                OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
 
-        }else if(ptrn.getPatternType().equals("o5")){
-            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            Set<OWLClass> owlClasses = new HashSet<>();
-            for(String s:ptrn.getClassList()){
-                owlClasses.add(Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+s)));
-            }
-            OWLObjectUnionOf unionOf = Init.getFactory().getOWLObjectUnionOf(owlClasses);
+                OWLObjectAllValuesFrom allValuesFrom = Init.getFactory().getOWLObjectAllValuesFrom(property, unionOf);
 
-            OWLObjectAllValuesFrom allValuesFrom =Init.getFactory().getOWLObjectAllValuesFrom(property,unionOf);
-            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,allValuesFrom);
 
-            if(cOrEq==1){
-                if(parent!=null){
-                    OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,allValuesFrom);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent, allValuesFrom);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, allValuesFrom);
+                    }
                 }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,allValuesFrom);
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, allValuesFrom);
                 }
+                break;
             }
-        }else if(ptrn.getPatternType().equals("o6")){
-            OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+ptrn.getdProperties().get(0)));
-            OWLDatatype dataType = Init.getFactory().getOWLDatatype(IRI.create(Variables.baseIRI+ptrn.getdTypes().get(0)));
-            OWLLiteral literal = Init.getFactory().getOWLLiteral(ptrn.getLiterals().get(0),dataType);
-            OWLDataHasValue hasValue = Init.getFactory().getOWLDataHasValue(property,literal);
-            axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,hasValue);
+            case "o6": {
+                OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI + ptrn.getdProperties().get(0)));
+                OWLDatatype dataType = Init.getFactory().getOWLDatatype(IRI.create(Variables.baseIRI + ptrn.getdTypes().get(0)));
+                OWLLiteral literal = Init.getFactory().getOWLLiteral(ptrn.getLiterals().get(0), dataType);
+                OWLDataHasValue hasValue = Init.getFactory().getOWLDataHasValue(property, literal);
 
-            if(cOrEq==1){
-                if(parent!=null){
-                    OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,hasValue);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
-                }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,hasValue);
-                }
-            }
-        }else{
-            OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+ptrn.getoProperties().get(0)));
-            OWLObjectCardinalityRestriction cardinality;
-            if(ptrn.getCardinalityType().equals("min")){
-                cardinality = Init.getFactory().getOWLObjectMinCardinality(ptrn.getCardinality(),property);
-            }else if(ptrn.getCardinalityType().equals("max")){
-                cardinality = Init.getFactory().getOWLObjectMaxCardinality(ptrn.getCardinality(),property);
-            }else {
-                cardinality = Init.getFactory().getOWLObjectExactCardinality(ptrn.getCardinality(), property);
-            }
-                axiom = Init.getFactory().getOWLSubClassOfAxiom(childC,cardinality);
 
-            if(cOrEq==1){
-                if(parent!=null){
-                    OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent,cardinality);
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,intersectionOf);
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent, hasValue);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, hasValue);
+                    }
                 }else{
-                    axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC,cardinality);
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, hasValue);
                 }
+                break;
             }
+            default: {
+                System.out.println("come");
+                OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI + ptrn.getoProperties().get(0)));
+                OWLObjectCardinalityRestriction cardinality;
+                if (ptrn.getCardinalityType().equals("min")) {
+                    cardinality = Init.getFactory().getOWLObjectMinCardinality(ptrn.getCardinality(), property);
+                } else if (ptrn.getCardinalityType().equals("max")) {
+                    cardinality = Init.getFactory().getOWLObjectMaxCardinality(ptrn.getCardinality(), property);
+                } else {
+                    cardinality = Init.getFactory().getOWLObjectExactCardinality(ptrn.getCardinality(), property);
+                }
+
+
+                if (cOrEq == 1) {
+                    if (parent != null) {
+                        OWLObjectIntersectionOf intersectionOf = Init.getFactory().getOWLObjectIntersectionOf(parent, cardinality);
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, intersectionOf);
+                    } else {
+                        axiom = Init.getFactory().getOWLEquivalentClassesAxiom(childC, cardinality);
+                    }
+                }else{
+                    axiom = Init.getFactory().getOWLSubClassOfAxiom(childC, cardinality);
+                }
+                break;
             }
+        }
+        System.out.println(axiom);
         return UtilMethods.addAxiom(axiom);
     }
 

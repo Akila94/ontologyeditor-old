@@ -14,7 +14,13 @@
 <div class="container">
     <div class="row">
         <div class="col-sm-3 col-md-3 col-lg-3 tree well well-sm">
-            <h4>Class Hierarchy <a onclick="loadClassData()" href="#"  data-toggle="modal" data-target="#addModel" id="addBtn"><span class="glyphicon glyphicon glyphicon-plus fa-md "/></a></h4>
+            <h4>Class Hierarchy
+                <a onclick="loadClassData()" href="#"  data-toggle="modal" data-target="#addModel" id="addBtn"><span class="glyphicon glyphicon-plus fa-md "/></a>
+
+                <form th:if="${undo}" action="/undo"  method="get" name="addAxiom">
+                    <button type="submit" class="btn btn-link"> <span class="glyphicon glyphicon-repeat"/></button>
+                </form>
+            </h4>
             <div id="class-tree"></div>
         </div>
         <div class="col-sm-9 col-md-9 col-lg-9 tree well well-sm" th:if="${session.currentClass} != 'Thing'">
@@ -396,6 +402,10 @@
 <script type="text/javascript">
     $(document).ready(function () {
 
+
+
+
+
         $('.group').hide();
         $('#o1').show();
         $("#axiomCat").change(function () {
@@ -453,7 +463,7 @@
                 type: form.attr("method"),
                 data: form.serialize(),
                 success: function(result){
-                    if((result.indexOf("PASSED")>-1) || (result.indexOf("Class Deleted")>-1)){
+                    if((result.indexOf("PASSED")>-1) || (result.indexOf("Class Deleted")>-1 ||(result.indexOf("Undo Success")>-1))){
                         $.notify("Success: " + result, "success");
                     }else{
                         $.notify("Failed: " + result, "error" );
@@ -533,7 +543,7 @@ function getNonDisjointClasses(){
                 dataType: 'json',
                 success: function (json) {
                     $.each(json, function (i, value) {
-                        $('#cl1,#cl2,#cl3,#cl4,#cl5').append($('<option>').text(value).attr('value', value)).append("</option>");
+                        $('#cl1,#cl2,#cl3,#cl4,#cl5,#cl8').append($('<option>').text(value).attr('value', value)).append("</option>");
                     });
                 }
             });

@@ -49,10 +49,9 @@ public class ApplicationTest {
 //                .andExpect(content().string(containsString("Hello, World!")));
 //    }
 
-//    @Test
-//    public void greetingWithUser() throws Exception {
-//        mockMvc.perform(get("/getHierarchy").param("name", "Greg"))
-//                .andExpect(content().string(containsString("Hello, Greg!")));
-//    }
+    @Test
+    public void greetingWithUser() throws Exception {
+        System.out.println("hello");
+    }
 
 }

@@ -1,10 +1,17 @@
 package hello.util;
 
+import com.clarkparsia.owlapi.explanation.BlackBoxExplanation;
 import com.clarkparsia.owlapi.explanation.DefaultExplanationGenerator;
+import com.clarkparsia.owlapi.explanation.SingleExplanationGenerator;
 import com.clarkparsia.owlapi.explanation.util.SilentExplanationProgressMonitor;
+import com.clarkparsia.pellet.IncrementalChangeTracker;
+import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory;
+import com.google.common.io.Files;
+import hello.bean.ChangeKeeper;
 import hello.bean.TreeNode;
 import hello.service.DBService;
+import org.apache.commons.io.FileUtils;
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer;
 import org.semanticweb.owlapi.io.OWLObjectRenderer;
 import org.semanticweb.owlapi.manchestersyntax.renderer.ManchesterOWLSyntaxOWLObjectRendererImpl;
@@ -16,9 +23,7 @@ import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrdererImpl;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationTree;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by Lotus on 8/20/2017.
@@ -31,19 +36,54 @@ public class UtilMethods {
     public static Set<OWLNamedIndividual> removedInstances;
     public static Set<OWLAnnotation> removedAnnotations;
 
+    public static List<ChangeKeeper> changeQueue = new ArrayList<>();
+
     public OWLOntology loadOntology(OWLOntologyManager manager, String fileName) throws OWLOntologyCreationException {
-      //  ClassLoader classLoader = getClass().getClassLoader();
-      //  File file = new File(classLoader.getResource(fileName).getFile());
-        return manager.loadOntologyFromOntologyDocument(new File(Variables.ontoPath));
+        System.out.println(Variables.ontoPath);
+        return manager.loadOntologyFromOntologyDocument(new File(fileName));
     }
 
-    public OWLOntology loadOntology(OWLOntologyManager manager,int main, int sub, int change) throws OWLOntologyCreationException {
-      //  ClassLoader classLoader = getClass().getClassLoader();
-       // File file = new File(classLoader.getResource("ontoDir/SLN_Ontology_"+main+"."+sub+"."+change).getFile());
-        return manager.loadOntologyFromOntologyDocument(new File(Variables.baseOntoPath+main+"."+sub+"."+change+".owl"));
+    public static void renameFile(String oldName, String newName) {
+        try {
+            File file = new File(newName);
+            if (file.createNewFile()) {
+                System.out.println("File is created!");
+            } else {
+                System.out.println("File already exists.");
+            }
+            FileWriter writer = new FileWriter(file);
+            writer.write("");
+            writer.close();
+
+            InputStream is = null;
+            OutputStream os = null;
+            try {
+                is = new FileInputStream(new File(oldName));
+                os = new FileOutputStream(file);
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = is.read(buffer)) > 0) {
+                    os.write(buffer, 0, length);
+                }
+            } finally {
+                assert is != null;
+                is.close();
+                assert os != null;
+                os.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-    public static TreeNode searchTree(String className, TreeNode node){
-        if (node.getText().equals(className)){
+
+    public OWLOntology loadOntology(OWLOntologyManager manager, int main, int sub, int change) throws OWLOntologyCreationException {
+        //  ClassLoader classLoader = getClass().getClassLoader();
+        // File file = new File(classLoader.getResource("ontoDir/SLN_Ontology_"+main+"."+sub+"."+change).getFile());
+        return manager.loadOntologyFromOntologyDocument(new File(Variables.baseOntoPath + main + "." + sub + "." + change + ".owl"));
+    }
+
+    public static TreeNode searchTree(String className, TreeNode node) {
+        if (node.getText().equals(className)) {
             return node;
         }
         List<?> children = node.getChildren();
@@ -54,43 +94,38 @@ public class UtilMethods {
         return res;
     }
 
-    public static String checkConsistency (OWLOntology ontology, OWLOntologyManager man) throws OWLOntologyCreationException
-    {
-        OWLReasonerFactory reasonerFactory = new PelletReasonerFactory();
-        OWLReasoner reasoner = reasonerFactory.createNonBufferingReasoner(ontology);
+    public static String checkConsistency(OWLOntology ontology) throws OWLOntologyCreationException {
+
         String answer;
 
-        if(reasoner.isConsistent())
-        {
-            if(reasoner.getUnsatisfiableClasses().getEntitiesMinusBottom().size()>0)
-            {
+        Init.getPelletReasoner().refresh();
+        if (Init.getPelletReasoner().isConsistent()) {
+            if (Init.getPelletReasoner().getUnsatisfiableClasses().getEntitiesMinusBottom().size() > 0) {
                 StringBuilder builder = new StringBuilder();
-                Set<OWLClass> clzes = reasoner.getUnsatisfiableClasses().getEntitiesMinusBottom();
-                for(OWLClass s:clzes){
-                    builder.append(s.getIRI().getShortForm()+", ");
+                Set<OWLClass> clzes = Init.getReasoner().getUnsatisfiableClasses().getEntitiesMinusBottom();
+                for (OWLClass s : clzes) {
+                    builder.append(s.getIRI().getShortForm() + ", ");
                 }
-                answer = "Merged ontology FAILED the consistency test, Unsatisfiable classes detected: " + builder.toString() ;
-                consistent=0;
-            }
-            else
-            {
+                answer = "Merged ontology FAILED the consistency test, Unsatisfiable classes detected: " + builder.toString();
+                consistent = 0;
+            } else {
                 answer = "Merged ontology PASSED the consistency test ";
-                consistent=1;
+                consistent = 1;
             }
-        }
-        else
-        {
+        } else {
             answer = "Merged ontology FAILED the consistency test";
-            consistent=0;
+            consistent = 0;
         }
-        reasoner.dispose();
-        return(answer);
+
+        Init.getPelletReasoner().flush();
+        return (answer);
+
     }
 
-    public static byte[] toByts(Object o){
+    public static byte[] toByts(Object o) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutput out = null;
-        byte[] bytes=null;
+        byte[] bytes = null;
         try {
             out = new ObjectOutputStream(bos);
             out.writeObject(o);
@@ -109,13 +144,13 @@ public class UtilMethods {
         return bytes;
     }
 
-    public static Object toObject(byte[] bytes){
+    public static Object toObject(byte[] bytes) {
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-        Object o=null;
+        Object o = null;
         ObjectInput in = null;
         try {
             in = new ObjectInputStream(bis);
-            o=in.readObject();
+            o = in.readObject();
 
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -133,38 +168,57 @@ public class UtilMethods {
 
     public static String manchesterExplainer(OWLAxiom axiomToExplain) {
         OWLObjectRenderer renderer = new ManchesterOWLSyntaxOWLObjectRendererImpl();
-        return  renderer.render(axiomToExplain);
+        return renderer.render(axiomToExplain);
 
     }
 
     public static String removeAxiom(OWLAxiom axiom) throws OWLOntologyCreationException, OWLOntologyStorageException {
 
-        RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(),axiom);
+        RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(), axiom);
         Init.getManager().applyChange(removeAxiom);
-        String reason = checkConsistency(Init.getOntology(), Init.getManager());
+        String reason = checkConsistency(Init.getOntology());
         if (consistent == 0) {
-            AddAxiom addAxiom = new AddAxiom(Init.getOntology(),axiom);
+            AddAxiom addAxiom = new AddAxiom(Init.getOntology(), axiom);
             Init.getManager().applyChange(addAxiom);
-        }else{
+        } else {
             axiomsQueue = new ArrayList<>();
             axiomsQueue.add(axiom);
+
+            ChangeKeeper changeKeeper = new ChangeKeeper();
+            List<OWLAxiomChange> changes = new ArrayList<>();
+            changes.add(new AddAxiom(Init.getOntology(), axiom));
+            changeKeeper.setChangeQueue(changes);
+            changeQueue.add(changeKeeper);
+
         }
         Init.getManager().saveOntology(Init.getOntology());
         return reason;
     }
 
     public static String addAxiom(OWLAxiom axiom) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        AddAxiom addAxiom = new AddAxiom(Init.getOntology(),axiom);
+        System.out.println("add come");
+        AddAxiom addAxiom = new AddAxiom(Init.getOntology(), axiom);
         Init.getManager().applyChange(addAxiom);
-        String reason = checkConsistency(Init.getOntology(), Init.getManager());
+        System.out.println("add applied");
+        String reason = checkConsistency(Init.getOntology());
+        System.out.println("add checked");
         if (consistent == 0) {
-            RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(),axiom);;
+            RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(), axiom);
             Init.getManager().applyChange(removeAxiom);
-        }else{
+        } else {
             axiomsQueue = new ArrayList<>();
             axiomsQueue.add(axiom);
+
+            ChangeKeeper changeKeeper = new ChangeKeeper();
+            List<OWLAxiomChange> changes = new ArrayList<>();
+            changes.add(new RemoveAxiom(Init.getOntology(), axiom));
+            changeKeeper.setChangeQueue(changes);
+            changeQueue.add(changeKeeper);
+
         }
+        System.out.println("add save");
         Init.getManager().saveOntology(Init.getOntology());
+        System.out.println("add out");
         return reason;
     }
 }

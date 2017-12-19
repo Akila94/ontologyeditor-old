@@ -6,14 +6,12 @@ import hello.bean.Pattern;
 import hello.bean.TreeNode;
 import hello.service.DBService;
 import hello.service.DataPropertyService;
-import hello.service.ObjectPropertyService;
 import hello.util.Init;
 import hello.util.UtilMethods;
 import hello.util.Variables;
 import org.semanticweb.owlapi.model.OWLException;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyStorageException;
-import org.semanticweb.owlapi.util.OWLOntologyMerger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -35,10 +33,24 @@ public class DataPropertyController {
     DBService dbService;
     @RequestMapping("/dataPropertyDetail/{property}")
     public String getDataPropertyHierarchy(@PathVariable String property, Model model, HttpSession session) throws OWLException, JsonProcessingException {
+        if(Variables.version==null){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            Variables.version = dbService.getUserCurrentVersion(user.getUsername());
+
+            Variables.ontoPath=Variables.version.getLocation();
+            session.setAttribute("versionSet",true);
+        }
+
+
+
         DataPropertyService service = new DataPropertyService();
 
         if(property==null){
-            model.addAttribute("module", "topDataProperty");
+            model.addAttribute("currentDP", "topDataProperty");
+        }else{
+
+            session.setAttribute("currentDP",property);
         }
         model.addAttribute("module", "dPView");
         model.addAttribute("pattern", new Pattern());
@@ -46,17 +58,21 @@ public class DataPropertyController {
         model.addAttribute("disjointDP",service.getDisjointDProperties(property));
         model.addAttribute("domainDP",service.getDPDomains(property));
         model.addAttribute("rangeDP",service.getDPRanges(property));
-        session.setAttribute("currentDP",property);
         TreeNode tree = service.printHierarchy(Init.getManager().getOWLDataFactory().getOWLTopDataProperty());
         ObjectMapper mapper = new ObjectMapper();
         String jsonInString = mapper.writeValueAsString(tree);
         model.addAttribute("tree", jsonInString);
+        tree=null;
+        model.addAttribute("undo",!UtilMethods.changeQueue.isEmpty());
+
+
+
         return "dataPropertyDetail";
     }
 
 
     @PostMapping("/addNewDProperty")
-    public ResponseEntity<?> addObjectProperty(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addDataProperty(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         DataPropertyService service = new DataPropertyService();
         String result;
         if(pattern.getoProperties().get(0).equals("topDataProperty")){
@@ -67,20 +83,19 @@ public class DataPropertyController {
         if(pattern.getClassList()!=null && !pattern.getClassList().isEmpty()){
             if(pattern.getClassList().get(0).equals("F")){
                 service.addFunctionalDProperty(pattern.getCurrentClass());
+
             }
         }
-
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addDataProperty((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
-        }
+        session.setAttribute("currentDP",pattern.getCurrentClass());
+        new ClassController().updateVersion(session,pattern,dbService,"currentDP");
 
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/removeDProperty")
     public ResponseEntity<?> removeDataProperty(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+
+        new ClassController().createVersion(dbService);
         String result = new DataPropertyService().removeDProperty((String) session.getAttribute("currentDP"));
 
         if(UtilMethods.consistent==1){
@@ -135,13 +150,25 @@ public class DataPropertyController {
 
     @PostMapping("/addDisDProperty")
     public ResponseEntity<?> addDisObjectProperty(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        DataPropertyService oPService = new DataPropertyService();
+        DataPropertyService dPService = new DataPropertyService();
         String result= null;
         for(String s:pattern.getoProperties()){
-            result = oPService.addDisDProperty((String) session.getAttribute("currentDP"),s);
+            result = dPService.addDisDProperty((String) session.getAttribute("currentDP"),s);
         }
 
         if(UtilMethods.consistent==1){
+            for(String s:pattern.getoProperties()){
+                result = dPService.removeDisDProperty((String) session.getAttribute("currentDP"),s);
+
+            }
+            new ClassController().createVersion(dbService);
+
+            for(String s:pattern.getoProperties()){
+                result = dPService.removeDisDProperty((String) session.getAttribute("currentDP"),s);
+
+            }
+
+
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
             dbService.addAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
@@ -154,11 +181,7 @@ public class DataPropertyController {
         DataPropertyService dPService = new DataPropertyService();
         String result = dPService.removeDisDProperty((String) session.getAttribute("currentDP"),property);
 
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
-        }
+        new ClassController().updateVersion(session,pattern,dbService,"currentDP");
 
         return ResponseEntity.ok(result);
     }
@@ -168,22 +191,20 @@ public class DataPropertyController {
         DataPropertyService dPService = new DataPropertyService();
         String result = dPService.addDPDomain((String) session.getAttribute("currentDP"),pattern.getClassList().get(0));
 
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
-        }
+        new ClassController().updateVersion(session,pattern,dbService,"currentDP");
 
         return ResponseEntity.ok(result);
     }
     @PostMapping("/removeDPropertyDomain/{property}")
-    public ResponseEntity<?> removeOPropertyDomain(@PathVariable String property,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> removeDPropertyDomain(@PathVariable String property,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         DataPropertyService dPService = new DataPropertyService();
+
+        new ClassController().createVersion(dbService);
         String result = dPService.removeDPDomain((String) session.getAttribute("currentDP"),property);
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
+            dbService.removeAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
 
         return ResponseEntity.ok(result);
@@ -194,23 +215,21 @@ public class DataPropertyController {
         DataPropertyService dPService = new DataPropertyService();
         String result= dPService.addDPRange((String) session.getAttribute("currentDP"),pattern.getClassList().get(0));
 
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
-        }
+        new ClassController().updateVersion(session,pattern,dbService,"currentDP");
 
         return ResponseEntity.ok(result);
     }
     @PostMapping("/removeDPropertyRange/{property}")
     public ResponseEntity<?> removeOPropertyRange(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         DataPropertyService dPService = new DataPropertyService();
+
+        new ClassController().createVersion(dbService);
         String result= dPService.removeDPRange((String) session.getAttribute("currentDP"),property);
 
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),1);
+            dbService.removeAxiom((String) session.getAttribute("currentDP"),user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
 
         return ResponseEntity.ok(result);

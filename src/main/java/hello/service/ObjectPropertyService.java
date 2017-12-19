@@ -1,5 +1,6 @@
 package hello.service;
 
+import hello.bean.ChangeKeeper;
 import hello.bean.TreeNode;
 import hello.util.Init;
 import hello.util.UtilMethods;
@@ -25,9 +26,8 @@ public class ObjectPropertyService {
     public ObjectPropertyService() {
     }
 
-    public TreeNode printHierarchy() throws OWLException {
-        OWLObjectProperty property = Init.getFactory().getOWLTopObjectProperty();
-        OWLReasoner reasoner = Init.getOwlReasonerFactory(Variables.Pellet).createNonBufferingReasoner(Init.getOntology());
+    public TreeNode printHierarchy(OWLObjectProperty property) throws OWLException {
+        OWLReasoner reasoner = Init.getOwlReasonerFactory(Variables.STRUCTURAL).createNonBufferingReasoner(Init.getOntology());
         printHierarchy(reasoner, property, 0);
         for (OWLClass pr : Init.getOntology().getClassesInSignature()) {
             if (!reasoner.isSatisfiable(pr)) {
@@ -45,10 +45,12 @@ public class ObjectPropertyService {
         }
 
         for (OWLObjectPropertyExpression child : reasoner.getSubObjectProperties(property, true).getFlattened()) {
-            if(!child.asOWLObjectProperty().getIRI().getShortForm().equals("bottomObjectProperty")) {
+            if(!child.isAnonymous()){
+            if(!child.asOWLObjectProperty().equals(Init.getFactory().getOWLBottomObjectProperty())) {
                 searchTree(property.asOWLObjectProperty().getIRI().getShortForm(), objectPropertyTree).addChild(child.asOWLObjectProperty().getIRI().getShortForm());
             }
-            if (!child.equals(property)) {
+            }
+            if (!child.equals(property) &&!child.isAnonymous()) {
                 printHierarchy(reasoner, child.asOWLObjectProperty(), level + 1);
             }
         }
@@ -73,11 +75,30 @@ public class ObjectPropertyService {
 
         UtilMethods.axiomsQueue = new ArrayList<>();
         UtilMethods.axiomsQueue.addAll(toRemove);
+
+        int index = 0;
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            if(UtilMethods.manchesterExplainer(a).contains("ObjectProperty:")){
+                Collections.swap(UtilMethods.axiomsQueue,UtilMethods.axiomsQueue.indexOf(a),index);
+                index++;
+            }
+        }
+
+        ChangeKeeper changeKeeper = new ChangeKeeper();
+        List<OWLAxiomChange> changes = new ArrayList<>();
+
+        changeKeeper.setChangeQueue(changes);
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            changes.add(new AddAxiom(Init.getOntology(),a));
+        }
+        UtilMethods.changeQueue.add(changeKeeper);
+
+
         UtilMethods.removedAnnotations = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(property, Init.getOntology());
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
+        UtilMethods.checkConsistency(Init.getOntology());
         return "Property Deleted";
     }
 
@@ -198,9 +219,27 @@ public class ObjectPropertyService {
         UtilMethods.axiomsQueue = new ArrayList<>();
         UtilMethods.axiomsQueue.addAll(toRemove);
 
+        int index = 0;
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            if(UtilMethods.manchesterExplainer(a).contains("ObjectProperty:")){
+                Collections.swap(UtilMethods.axiomsQueue,UtilMethods.axiomsQueue.indexOf(a),index);
+                index++;
+            }
+        }
+
+        ChangeKeeper changeKeeper = new ChangeKeeper();
+        List<OWLAxiomChange> changes = new ArrayList<>();
+
+        changeKeeper.setChangeQueue(changes);
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            changes.add(new AddAxiom(Init.getOntology(),a));
+        }
+        UtilMethods.changeQueue.add(changeKeeper);
+
+
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        return UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
+        return UtilMethods.checkConsistency(Init.getOntology());
     }
 
     public boolean isFunctional(String prop){

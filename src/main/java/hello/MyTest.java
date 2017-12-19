@@ -2,6 +2,8 @@ package hello;
 
 import com.clarkparsia.owlapi.explanation.DefaultExplanationGenerator;
 import com.clarkparsia.owlapi.explanation.util.SilentExplanationProgressMonitor;
+import com.google.common.base.Optional;
+import hello.bean.mode.OntoVersion;
 import hello.util.Init;
 import hello.util.UtilMethods;
 import hello.util.Variables;
@@ -20,14 +22,12 @@ import org.semanticweb.owlapi.util.BidirectionalShortFormProviderAdapter;
 import org.semanticweb.owlapi.util.OWLEntityRenamer;
 import org.semanticweb.owlapi.util.SimpleShortFormProvider;
 import org.semanticweb.owlapi.util.mansyntax.ManchesterOWLSyntaxParser;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrderer;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationTree;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static hello.util.UtilMethods.checkConsistency;
 
@@ -41,12 +41,10 @@ public class MyTest {
     private static OWLReasoner reasoner;
     private static OWLDataFactory dataFactory;
 
-
-
     public static void main(String[] args) throws OWLException, IOException {
         manager = OWLManager.createOWLOntologyManager();
-        UtilMethods utiles = new UtilMethods();
-        ontology = utiles.loadOntology(manager,Variables.baseIRI);
+        UtilMethods utils = new UtilMethods();
+        ontology = utils.loadOntology(manager,Variables.baseIRI);
         owlReasonerFactory = new StructuralReasonerFactory();
         dataFactory = OWLManager.getOWLDataFactory();
         reasoner = owlReasonerFactory.createNonBufferingReasoner(ontology);
@@ -55,34 +53,10 @@ public class MyTest {
         Set<OWLObjectProperty> propertySet = Init.getOntology().getObjectPropertiesInSignature();
         System.out.println(propertySet);
 
-    }
-
-
-
-    public static List<OWLObjectPropertyDomainAxiom> getDoaminOf(OWLClass clz){
-        List<OWLObjectPropertyDomainAxiom> domainOf = new ArrayList<>();
-        for(OWLObjectProperty p: ontology.getObjectPropertiesInSignature()){
-            Set<OWLObjectPropertyDomainAxiom> da = ontology.getObjectPropertyDomainAxioms(p);
-            for(OWLObjectPropertyDomainAxiom a:da){
-                if(a.getClassesInSignature().iterator().next().equals(clz)){
-                    domainOf.add(a);
-                }
-            }
-        }
-        return domainOf;
-    }
-
-    public static List<OWLObjectPropertyRangeAxiom> getRangeOf(OWLClass clz){
-        List<OWLObjectPropertyRangeAxiom> rangeOf = new ArrayList<>();
-        for(OWLObjectProperty p: ontology.getObjectPropertiesInSignature()){
-            Set<OWLObjectPropertyRangeAxiom> da = ontology.getObjectPropertyRangeAxioms(p);
-            for(OWLObjectPropertyRangeAxiom a:da){
-                if(a.getClassesInSignature().iterator().next().equals(clz)){
-                    rangeOf.add(a);
-                }
-            }
-        }
-        return rangeOf;
+        OntoVersion ontoVersion= new OntoVersion();
+        ontoVersion.setMainVersion(1);
+        ontoVersion.setSubVersion(1);
+        ontoVersion.setChangeVersion(0);
     }
 
     private static void printClasses(Set<OWLClass> classes) {
@@ -150,31 +124,6 @@ public class MyTest {
 
     }
 
-
-    public static String removeSubClass(String parent, String child) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        OWLOntologyManager man = OWLManager.createOWLOntologyManager();
-
-        UtilMethods utiles = new UtilMethods();
-        OWLOntology ontology = utiles.loadOntology(man,Variables.ontoPath);
-        OWLDataFactory df = OWLManager.getOWLDataFactory();
-
-        OWLClass entity = df.getOWLEntity(EntityType.CLASS, IRI.create("http://lumii.lv/ontologies/pizza.owl#", parent));
-        OWLClass entity2 = df.getOWLEntity(EntityType.CLASS, IRI.create("http://lumii.lv/ontologies/pizza.owl#", child));
-        OWLAxiom axiom = df.getOWLSubClassOfAxiom(entity, entity2);
-        RemoveAxiom removeAxiom = new RemoveAxiom(ontology, axiom);
-
-        man.applyChange(removeAxiom);
-
-        String reason = checkConsistency(ontology, man);
-
-
-        man.saveOntology(ontology);
-        System.out.println(reason);
-        return reason;
-    }
-
-
-
     private static void renameURI(OWLEntity entityToRename, IRI newNameIRI, OWLOntologyManager mngr) throws OWLOntologyStorageException {
         if (!mngr.contains(newNameIRI)) {
             OWLEntityRenamer owlEntityRenamer = new OWLEntityRenamer(mngr, mngr.getOntologies());
@@ -194,10 +143,6 @@ public class MyTest {
 
 
     }
-
-    //////////////
-
-
     public static String explain(OWLOntology ontology, OWLOntologyManager manager, OWLReasonerFactory reasonerFactory, OWLReasoner reasoner, OWLAxiom axiomToExplain) {
 
         DefaultExplanationGenerator explanationGenerator = new DefaultExplanationGenerator(manager, reasonerFactory, ontology, reasoner, new SilentExplanationProgressMonitor());
@@ -228,43 +173,7 @@ public class MyTest {
 //        }
 //    }
 
-    public Set<OWLClass> getEquivalentClasses(OWLClassExpression classExpression, OWLOntology ontology)
-            throws ParserException {
-//        if (classExpressionString.trim().length() == 0) {
-//            return Collections.emptySet();
-//        }
-        OWLReasonerFactory reasonerFactory = new StructuralReasonerFactory();
-        OWLReasoner reasoner = reasonerFactory.createNonBufferingReasoner(ontology);
-        Node<OWLClass> equivalentClasses = reasoner.getEquivalentClasses(classExpression);
-        Set<OWLClass> result;
-        if (classExpression.isAnonymous()) {
-            result = equivalentClasses.getEntities();
-        } else {
-            result = equivalentClasses.getEntitiesMinus(classExpression.asOWLClass());
-        }
-        return result;
-    }
 
-
-
-
-
-
-    public static OWLClass getParent(OWLClass clz) {
-        Set<OWLClass> classes = ontology.getClassesInSignature();
-        OWLClass parent=dataFactory.getOWLThing();
-        for(OWLClass c:classes){
-
-            for (OWLClass child : reasoner.getSubClasses(c, true).getFlattened()) {
-                if (reasoner.isSatisfiable(child)) {
-                    if(child.equals(clz)){
-                        parent = c;
-                    }
-                }
-            }
-        }
-        return parent;
-    }
 
     public static void parseClassExpression(
             String classExpressionString) {

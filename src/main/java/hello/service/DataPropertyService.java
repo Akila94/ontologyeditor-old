@@ -1,5 +1,6 @@
 package hello.service;
 
+import hello.bean.ChangeKeeper;
 import hello.bean.Pattern;
 import hello.bean.TreeNode;
 import hello.util.Init;
@@ -25,6 +26,7 @@ public class DataPropertyService {
     }
 
     public TreeNode printHierarchy(OWLDataProperty property) throws OWLException {
+        System.out.println(property);
         OWLReasoner reasoner = Init.getOwlReasonerFactory(Variables.STRUCTURAL).createNonBufferingReasoner(Init.getOntology());
         printHierarchy(reasoner, property, 0);
         for (OWLClass pr : Init.getOntology().getClassesInSignature()) {
@@ -43,7 +45,7 @@ public class DataPropertyService {
         }
 
         for (OWLDataPropertyExpression child : reasoner.getSubDataProperties(property, true).getFlattened()) {
-            if(!child.asOWLDataProperty().getIRI().getShortForm().equals("bottomDataProperty")){
+            if(!child.asOWLDataProperty().equals(Init.getFactory().getOWLBottomDataProperty())){
                 searchTree(property.asOWLDataProperty().getIRI().getShortForm(), objectPropertyTree).addChild(child.asOWLDataProperty().getIRI().getShortForm());
             }
 
@@ -77,14 +79,33 @@ public class DataPropertyService {
             }
         }
 
+
         UtilMethods.axiomsQueue = new ArrayList<>();
         UtilMethods.axiomsQueue.addAll(toRemove);
+        int index = 0;
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            if(UtilMethods.manchesterExplainer(a).contains("DataProperty:")){
+                Collections.swap(UtilMethods.axiomsQueue,UtilMethods.axiomsQueue.indexOf(a),index);
+                index++;
+            }
+        }
+
+        ChangeKeeper changeKeeper = new ChangeKeeper();
+        List<OWLAxiomChange> changes = new ArrayList<>();
+
+        changeKeeper.setChangeQueue(changes);
+        for(OWLAxiom a:UtilMethods.axiomsQueue){
+            changes.add(new AddAxiom(Init.getOntology(),a));
+        }
+        UtilMethods.changeQueue.add(changeKeeper);
+
+
         UtilMethods.removedAnnotations = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(property, Init.getOntology());
 
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        UtilMethods.checkConsistency(Init.getOntology(),Init.getManager());
+        UtilMethods.checkConsistency(Init.getOntology());
         return "Property Deleted";
     }
 

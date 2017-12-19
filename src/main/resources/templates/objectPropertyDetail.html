@@ -14,7 +14,12 @@
 <div class="container">
     <div class="row">
         <div class="col-sm-3 tree well well-sm">
-            <h4>Object Property Hierarchy<a href="#" onclick="loadPropertyData()" data-toggle="modal" data-target="#addOProperty" id="addBtn"><span class="glyphicon glyphicon-plus fa-md "/></a></h4>
+            <h4>Object Property Hierarchy
+                <a href="#"  data-toggle="modal" data-target="#addOProperty" id="addBtn"><span class="glyphicon glyphicon-plus fa-md "/></a>
+                <form th:if="${undo}" action="/undo"  method="get" name="addForm">
+                    <button type="submit" class="btn btn-link"> <span class="glyphicon glyphicon-repeat"/></button>
+                </form>
+            </h4>
             <div id="tree"></div>
         </div>
         <div class="col-sm-9 tree well well-sm" th:if="${session.currentOP} != 'topObjectProperty'">
@@ -76,7 +81,7 @@
 
             <div class="panel panel-success">
                 <div class="panel-heading">Inverse Property
-                    <a onclick="loadPropertyData()" th:if="${oPInverse} == null" href="#" data-toggle="modal" data-target="#addIOProperty" ><span class="glyphicon glyphicon-plus-sign fa-lg pull-right"/></a>
+                    <a  th:if="${oPInverse} == null" href="#" data-toggle="modal" data-target="#addIOProperty" ><span class="glyphicon glyphicon-plus-sign fa-lg pull-right"/></a>
 
                     <a href="#" th:if="${oPInverse} != null" onclick="changeAction('/removeIOProperty');" data-toggle="modal" data-target="#deleteForm"><span class="glyphicon glyphicon-remove-circle fa-lg pull-right"/></a>
                 </div>
@@ -411,7 +416,7 @@
                 type: form.attr("method"),
                 data: form.serialize(),
                 success: function(result){
-                    if((result.indexOf("PASSED")>-1) || (result.indexOf("Property Deleted")>-1)){
+                    if((result.indexOf("PASSED")>-1) || (result.indexOf("Property Deleted")>-1||(result.indexOf("Undo Success"))>-1)){
                         $.notify("Success: " + result, "success");
                     }else{
                         $.notify("Failed: " + result, "error" );
@@ -439,7 +444,7 @@
 
         getChars();
         loadDisjoint();
-        $("[name='classList']").bootstrapSwitch();
+        loadPropertyData();
 
 
     });
@@ -460,18 +465,16 @@
     }
 
     function loadPropertyData() {
-        $('#op1,#op2').empty();
-            $.ajax({
-                url: '/getObjectProperties',
-                type: 'get',
-                dataType: 'json',
-                success: function (json) {
-                    $.each(json, function (i, value) {
-                        $('#op1,#op2').append($('<option>').text(value).attr('value', value))
-                            .append("</option>");
-                    });
-                }
-            });
+        $.ajax({
+            url: '/getObjectProperties',
+            type: 'get',
+            dataType: 'json',
+            success: function (json) {
+                $.each(json, function (i, value) {
+                    $('#op1,#op2').append($('<option>').text(value).attr('value', value)).append("</option>");
+                });
+            }
+        });
 
     }
 
@@ -529,13 +532,11 @@
             dataType: 'json',
             success: function (json) {
                 $.each(json, function (i, value) {
-                    $('#op3').append($('<option>').text(value).attr('value', value))
-                        .append("</option>");
+                    $('#op3').append($('<option>').text(value).attr('value', value)).append("</option>");
                 });
             }
         });
     }
-
     function loadDisjoint(){
         $.ajax({
             url: '/getDisOProperties',

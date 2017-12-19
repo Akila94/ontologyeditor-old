@@ -5,8 +5,11 @@ import hello.bean.Pattern;
 import hello.bean.TreeNode;
 import hello.service.DBService;
 import hello.service.ObjectPropertyService;
+import hello.util.Init;
 import hello.util.UtilMethods;
+import hello.util.Variables;
 import org.semanticweb.owlapi.model.OWLException;
+import org.semanticweb.owlapi.model.OWLObjectProperty;
 import org.semanticweb.owlapi.model.OWLOntologyCreationException;
 import org.semanticweb.owlapi.model.OWLOntologyStorageException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +33,20 @@ public class ObjectPropertyController {
 
     @RequestMapping("/objectPropertyDetail/{property}")
     public String getObjectPropertyHierarchy(@PathVariable String property, Model model, HttpSession session) throws OWLException {
+
+        if(Variables.version==null){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            Variables.version = dbService.getUserCurrentVersion(user.getUsername());
+
+            Variables.ontoPath=Variables.version.getLocation();
+            session.setAttribute("versionSet",true);
+        }
+
         if(property==null){
-            model.addAttribute("module", "topObjectProperty");
+            model.addAttribute("currentOP", "topObjectProperty");
+        }else{
+            session.setAttribute("currentOP",property);
         }
 
         ObjectPropertyService oPService = new ObjectPropertyService();
@@ -42,13 +57,13 @@ public class ObjectPropertyController {
         model.addAttribute("domainOP",oPService.getDomains(property));
         model.addAttribute("rangeOP",oPService.getRanges(property));
         model.addAttribute("pattern", new Pattern());
-        session.setAttribute("currentOP",property);
-
-        TreeNode tree = oPService.printHierarchy();
+        model.addAttribute("undo",!UtilMethods.changeQueue.isEmpty());
+        TreeNode tree = oPService.printHierarchy(Init.getManager().getOWLDataFactory().getOWLTopObjectProperty());
         ObjectMapper mapper = new ObjectMapper();
         try {
             String jsonInString = mapper.writeValueAsString(tree);
             model.addAttribute("tree", jsonInString);
+            tree=null;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -57,7 +72,7 @@ public class ObjectPropertyController {
 
     @RequestMapping("/getOPHierarchy")
     public ResponseEntity<?> getObjectPropertyHierarchy() throws OWLException {
-        TreeNode tree = new ObjectPropertyService().printHierarchy();
+        TreeNode tree = new ObjectPropertyService().printHierarchy(Init.getManager().getOWLDataFactory().getOWLTopObjectProperty());
         ObjectMapper mapper = new ObjectMapper();
         String jsonInString = null;
         try {
@@ -113,13 +128,15 @@ public class ObjectPropertyController {
         if(pattern.getoProperties().get(0).equals("topObjectProperty")){
             result = objectPropertyService.addOProperty(pattern.getCurrentClass());
 
-        if(UtilMethods.consistent==1){
-            dbService.addObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
-        }
+            if(UtilMethods.consistent==1){
+                session.setAttribute("currentOP",pattern.getCurrentClass());
+                dbService.addObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
+            }
         }else{
             result = objectPropertyService.addSubOProperty(pattern.getCurrentClass(),pattern.getoProperties().get(0));
             if(UtilMethods.consistent==1){
-                dbService.addObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                session.setAttribute("currentOP",pattern.getCurrentClass());
+                dbService.addObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
             }
         }
 
@@ -127,39 +144,41 @@ public class ObjectPropertyController {
             if(s.equals("F")){
                 result = objectPropertyService.addFunctionalProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }else if(s.equals("IF")){
                 result = objectPropertyService.addInverseFunctionalProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }else if(s.equals("T")){
                 result = objectPropertyService.addTransitiveProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }else if(s.equals("S")){
                 result = objectPropertyService.addSymmetricProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }else if(s.equals("AS")){
                 result = objectPropertyService.addAsymmetricProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }else if(s.equals("R")){
                 result = objectPropertyService.addReflexiveProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }else{
                 result = objectPropertyService.addIreflexiveProperty(pattern.getCurrentClass());
                 if(UtilMethods.consistent==1){
-                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+                    dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
                 }
             }
+
+            new ClassController().updateVersion(session,pattern,dbService,"currentOP");
         }
         return ResponseEntity.ok(result);
     }
@@ -278,39 +297,38 @@ public class ObjectPropertyController {
 
     @GetMapping("/removeOProperty")
     public ResponseEntity<?> removeOProperty(@ModelAttribute Pattern pattern,HttpSession session) throws OWLOntologyStorageException, OWLOntologyCreationException {
+
+        new ClassController().createVersion(dbService);
         String result = new ObjectPropertyService().removeOProperty((String) session.getAttribute("currentOP"));
 
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+            dbService.removeObjectProperty((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
         session.setAttribute("currentOP","topObjectProperty");
         return ResponseEntity.ok(result);
     }
     @PostMapping("/addIOProperty")
     public ResponseEntity<?> addIObjectProperty(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        System.out.println(pattern);
+
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.addInverseProperty((String) session.getAttribute("currentOP"),pattern.getoProperties().get(0));
 
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
-        }
+        new ClassController().updateVersion(session,pattern,dbService,"currentOP");
 
         return ResponseEntity.ok(result);
     }
     @GetMapping("/removeIOProperty")
     public ResponseEntity<?> addIObjectProperty(Model model, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+        new ClassController().createVersion(dbService);
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.removeInverseProperty((String) session.getAttribute("currentOP"));
 
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),1);
+            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),UtilMethods.manchesterExplainer(UtilMethods.axiomsQueue.get(0)),Variables.version.getId());
         }
 
         return ResponseEntity.ok(result);
@@ -320,23 +338,25 @@ public class ObjectPropertyController {
     @PostMapping("/addOPropertyRange")
     public ResponseEntity<?> addOPropertyRange(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
+        new ClassController().updateVersion(session,pattern,dbService,"currentOP");
         String result= oPService.addRange((String) session.getAttribute("currentOP"),pattern.getClassList().get(0));
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
         return ResponseEntity.ok(result);
     }
     @GetMapping("/removeOPropertyRange/{property}")
     public ResponseEntity<?> removeOPropertyRange(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
+        new ClassController().createVersion(dbService);
         String result= oPService.removeRange((String) session.getAttribute("currentOP"),property);
 
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
         return ResponseEntity.ok(result);
     }
@@ -346,23 +366,20 @@ public class ObjectPropertyController {
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.addDomain((String) session.getAttribute("currentOP"),pattern.getClassList().get(0));
 
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
-        }
+        new ClassController().updateVersion(session,pattern,dbService,"currentOP");
 
         return ResponseEntity.ok(result);
     }
     @GetMapping("/removeOPropertyDomain/{property}")
     public ResponseEntity<?> removeOPropertyDomain(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
         ObjectPropertyService oPService = new ObjectPropertyService();
+        new ClassController().createVersion(dbService);
         String result = oPService.removeDomain((String) session.getAttribute("currentOP"),property);
 
         if(UtilMethods.consistent==1){
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),pattern.getDescription(),1);
+            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
 
         return ResponseEntity.ok(result);
@@ -383,12 +400,23 @@ public class ObjectPropertyController {
         String result= null;
         for(String s:pattern.getoProperties()){
             result = oPService.addDisOProperty((String) session.getAttribute("currentOP"),s);
+
         }
 
         if(UtilMethods.consistent==1){
+            for(String s:pattern.getoProperties()){
+                result = oPService.removeDisOProperty((String) session.getAttribute("currentOP"),s);
+
+            }
+            new ClassController().createVersion(dbService);
+
+            for(String s:pattern.getoProperties()){
+                result = oPService.removeDisOProperty((String) session.getAttribute("currentOP"),s);
+
+            }
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),1);
+            dbService.addAxiom((String) session.getAttribute("currentOP"), user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
 
         return ResponseEntity.ok(result);
@@ -399,11 +427,7 @@ public class ObjectPropertyController {
         ObjectPropertyService oPService = new ObjectPropertyService();
         String result = oPService.removeDisOProperty((String) session.getAttribute("currentOP"),property);
 
-        if(UtilMethods.consistent==1){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            dbService.removeAxiom((String) session.getAttribute("currentOP"),user.getUsername(),pattern.getDescription(),1);
-        }
+        new ClassController().updateVersion(session,pattern,dbService,"currentOP");
 
         return ResponseEntity.ok(result);
     }
