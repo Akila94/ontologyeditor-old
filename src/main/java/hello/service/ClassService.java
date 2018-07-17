@@ -1,6 +1,7 @@
 package hello.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hello.bean.ChangeKeeper;
 import hello.bean.ClassAxiom;
 import hello.bean.Pattern;
@@ -18,9 +19,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 
-import static hello.util.UtilMethods.checkConsistency;
-import static hello.util.UtilMethods.searchTree;
-
 /**
  * Created by Lotus on 8/16/2017.
  */
@@ -28,33 +26,47 @@ import static hello.util.UtilMethods.searchTree;
 public class ClassService {
 
     private TreeNode classTree = null;
+    private String treeString = null;
 
-    public ClassService() {
+    private final DBService dbService;
+
+    public ClassService(DBService dbService) {
+        this.dbService = dbService;
+        Variables.version = dbService.getUserCurrentVersion("admin");
+        Variables.ontoPath=Variables.version.getLocation();
+        try {
+            printHierarchy(Init.getOntology().getOWLOntologyManager().getOWLDataFactory().getOWLThing());
+        } catch (OWLException e) {
+            e.printStackTrace();
+        }
     }
 
-    public TreeNode printHierarchy(OWLClass clazz) throws OWLException {
-        printHierarchy(Init.getReasoner(Variables.STRUCTURAL), clazz, 0);
-        for (OWLClass cl : Init.getOntology().getClassesInSignature()) {
-        }
-        return classTree;
-     }
-    private void printHierarchy(OWLReasoner reasoner, OWLClass clazz, int level)
-            throws OWLException {
-        if (reasoner.isSatisfiable(clazz)) {
-
+    public void printHierarchy(OWLClass clazz) throws OWLException {
+        if (Init.getReasoner(Variables.STRUCTURAL).isSatisfiable(clazz)) {
             if(classTree == null){
                 classTree = new TreeNode(clazz.getIRI().getShortForm());
             }
 
-            for (OWLClass child : reasoner.getSubClasses(clazz, true).getFlattened()) {
-                if (reasoner.isSatisfiable(child)) {
-                    searchTree(clazz.getIRI().getShortForm(),classTree).addChild(child.getIRI().getShortForm());
+            for (OWLClass child : Init.getReasoner(Variables.STRUCTURAL).getSubClasses(clazz, true).getFlattened()) {
+                if (Init.getReasoner(Variables.STRUCTURAL).isSatisfiable(child)) {
+                    UtilMethods.searchTree(clazz.getIRI().getShortForm(),classTree).addChild(child.getIRI().getShortForm());
                     if (!child.equals(clazz)) {
-                        printHierarchy(reasoner, child, level + 1);
+                        printHierarchy(child);
                     }
                 }
             }
         }
+    }
+
+    public String getClassTree(boolean build) throws JsonProcessingException, OWLException {
+        if(build){
+            printHierarchy(Init.getOntology().getOWLOntologyManager().getOWLDataFactory().getOWLThing());
+        }
+        if(treeString==null|| build){
+            ObjectMapper mapper = new ObjectMapper();
+            treeString = mapper.writeValueAsString(classTree);
+        }
+        return treeString;
     }
 
     List<OWLClass> clzes;
@@ -108,15 +120,14 @@ public class ClassService {
     }
 
 
-    public String addClass(String className) throws OWLOntologyStorageException, OWLOntologyCreationException {
+    public String addClass(String className) throws Exception {
 
         OWLEntity entity = Init.getFactory().getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI, className));
         OWLAxiom declare = Init.getFactory().getOWLDeclarationAxiom(entity);
         return UtilMethods.addAxiom(declare);
     }
 
-    public String deleteClass(OWLClass owlClass) throws OWLOntologyStorageException, OWLOntologyCreationException
-    {
+    public String deleteClass(OWLClass owlClass) throws Exception {
 
         Set<OWLAxiom> toRemove = new HashSet<>();
         for (OWLAxiom select : Init.getOntology().getAxioms())
@@ -152,11 +163,11 @@ public class ClassService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        UtilMethods.checkConsistency(Init.getOntology());
+        UtilMethods.checkConsistency();
         return "Class Deleted";
     }
 
-    public String addClassAxiom(Pattern ptrn, int cOrEq) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addClassAxiom(Pattern ptrn, int cOrEq) throws Exception {
 
         OWLAxiom axiom ;
         OWLClass childC = Init.getFactory().getOWLEntity(EntityType.CLASS, IRI.create(Variables.baseIRI,ptrn.getCurrentClass() ));
@@ -421,7 +432,7 @@ public class ClassService {
         return rangeOf;
     }
 
-    public String addOrRemoveDisjointClass(String clz, String dClz, int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addOrRemoveDisjointClass(String clz, String dClz, int addOrRemove) throws Exception {
         OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+clz));
         OWLClass dis = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+dClz));
         OWLAxiom dja = Init.getFactory().getOWLDisjointClassesAxiom(current,dis);
@@ -434,7 +445,7 @@ public class ClassService {
     }
 
 //1=add
-    public String addOrRemoveDomainOf(String clz, String prop, int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addOrRemoveDomainOf(String clz, String prop, int addOrRemove) throws Exception {
         OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+clz));
         OWLAxiom axiom;
         if(new ObjectPropertyService().getAllOProperties().contains(prop)){
@@ -453,7 +464,7 @@ public class ClassService {
 
     }
 
-    public String addOrRemoveRangeOf(String clz, String prop, int addOrRemove) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addOrRemoveRangeOf(String clz, String prop, int addOrRemove) throws Exception {
 
         OWLClass current = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+clz));
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));

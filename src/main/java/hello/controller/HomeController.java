@@ -39,14 +39,14 @@ public class HomeController {
             session.setAttribute("versionSet",true);
         }
 
-        Init init = new Init();
+
         OntologyService info = new OntologyService();
         model.addAttribute("module", "home");
-        model.addAttribute("axiomInfo",info.processAxioms(init.getOntology()));
-        model.addAttribute("name",info.getOntologyName(init.getOntology()));
-        model.addAttribute("version",info.getOntologyVersion(init.getOntology()));
-        model.addAttribute("description",info.getDescription(init.getOntology()));
-        model.addAttribute("contributors",info.getContributors(init.getOntology()));
+        model.addAttribute("axiomInfo",info.processAxioms(Init.getOntology()));
+        model.addAttribute("name",info.getOntologyName(Init.getOntology()));
+        model.addAttribute("version",info.getOntologyVersion(Init.getOntology()));
+        model.addAttribute("description",info.getDescription(Init.getOntology()));
+        model.addAttribute("contributors",info.getContributors(Init.getOntology()));
 
 
 

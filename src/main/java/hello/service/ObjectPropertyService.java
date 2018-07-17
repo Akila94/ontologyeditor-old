@@ -11,6 +11,7 @@ import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.search.EntitySearcher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 
@@ -19,6 +20,8 @@ import static hello.util.UtilMethods.searchTree;
 /**
  * Created by Lotus on 8/20/2017.
  */
+
+@Service
 public class ObjectPropertyService {
 
     private TreeNode objectPropertyTree = null;
@@ -56,13 +59,13 @@ public class ObjectPropertyService {
         }
     }
 
-    public String addOProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addOProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLDeclarationAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
 
-    public String removeOProperty(String p) throws OWLOntologyStorageException, OWLOntologyCreationException {
+    public String removeOProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         Set<OWLAxiom> toRemove = new HashSet<>();
         for (OWLAxiom select : Init.getOntology().getAxioms())
@@ -98,7 +101,7 @@ public class ObjectPropertyService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        UtilMethods.checkConsistency(Init.getOntology());
+        UtilMethods.checkConsistency();
         return "Property Deleted";
     }
 
@@ -112,80 +115,80 @@ public class ObjectPropertyService {
          return properties;
     }
 
-    public String addSubOProperty(String p, String pa) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addSubOProperty(String p, String pa) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLObjectProperty parent = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+pa));
         OWLSubObjectPropertyOfAxiom sub = Init.getFactory().getOWLSubObjectPropertyOfAxiom(property,parent);
         return UtilMethods.addAxiom(sub);
     }
 
-    public String addFunctionalProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addFunctionalProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLFunctionalObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
-    public String addInverseFunctionalProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addInverseFunctionalProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLInverseFunctionalObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
-    public String addTransitiveProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addTransitiveProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLTransitiveObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
-    public String addSymmetricProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addSymmetricProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLSymmetricObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
-    public String addAsymmetricProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addAsymmetricProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLAsymmetricObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
-    public String addReflexiveProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addReflexiveProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLReflexiveObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
-    public String addIreflexiveProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addIreflexiveProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLIrreflexiveObjectPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
 
-    public String removeFunctionalProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeFunctionalProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLFunctionalObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
     }
-    public String removeInverseFunctionalProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeInverseFunctionalProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLInverseFunctionalObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
     }
-    public String removeTransitiveProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeTransitiveProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLTransitiveObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
     }
-    public String removeSymetricProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeSymetricProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLSymmetricObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
     }
-    public String removeAsymetricProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeAsymetricProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLAsymmetricObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
     }
-    public String removeReflexiveProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeReflexiveProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLReflexiveObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
     }
-    public String removeIreflexiveProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeIreflexiveProperty(String p) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLIrreflexiveObjectPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
@@ -203,7 +206,7 @@ public class ObjectPropertyService {
         return i;
     }
 
-    public String addInverseProperty(String prop, String iProp) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addInverseProperty(String prop, String iProp) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLObjectProperty iProperty = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+iProp));
         OWLAxiom axiom = Init.getFactory().getOWLInverseObjectPropertiesAxiom(property, iProperty);
@@ -212,7 +215,7 @@ public class ObjectPropertyService {
 
     }
 
-    public String removeInverseProperty(String prop) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeInverseProperty(String prop) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         Set<OWLInverseObjectPropertiesAxiom> toRemove = Init.getOntology().getInverseObjectPropertyAxioms(property);
 
@@ -239,7 +242,7 @@ public class ObjectPropertyService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        return UtilMethods.checkConsistency(Init.getOntology());
+        return UtilMethods.checkConsistency();
     }
 
     public boolean isFunctional(String prop){
@@ -296,14 +299,14 @@ public class ObjectPropertyService {
         return all;
     }
 
-    public String addDisOProperty(String prop,String dis) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addDisOProperty(String prop,String dis) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLObjectProperty disP = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+dis));
         OWLDisjointObjectPropertiesAxiom axiom = Init.getFactory().getOWLDisjointObjectPropertiesAxiom(property,disP);
         return UtilMethods.addAxiom(axiom);
     }
 
-    public String removeDisOProperty(String prop,String dis) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeDisOProperty(String prop,String dis) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLObjectProperty disP = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+dis));
         OWLDisjointObjectPropertiesAxiom axiom = Init.getFactory().getOWLDisjointObjectPropertiesAxiom(property,disP);
@@ -321,7 +324,7 @@ public class ObjectPropertyService {
         return domains;
     }
 
-    public String addDomain(String prop,String doamin) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addDomain(String prop,String doamin) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLClass d = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+doamin));
         OWLObjectPropertyDomainAxiom axiom = Init.getFactory().getOWLObjectPropertyDomainAxiom(property,d);
@@ -329,7 +332,7 @@ public class ObjectPropertyService {
         return UtilMethods.addAxiom(axiom);
     }
 
-    public String removeDomain(String prop,String doamin) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeDomain(String prop,String doamin) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLClass d = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+doamin));
         OWLObjectPropertyDomainAxiom axiom = Init.getFactory().getOWLObjectPropertyDomainAxiom(property,d);
@@ -348,14 +351,14 @@ public class ObjectPropertyService {
         return ranges;
     }
 
-    public String addRange(String prop,String range) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addRange(String prop,String range) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLClass r = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+range));
         OWLObjectPropertyRangeAxiom axiom = Init.getFactory().getOWLObjectPropertyRangeAxiom(property,r);
         return UtilMethods.addAxiom(axiom);
     }
 
-    public String removeRange(String prop,String range) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeRange(String prop,String range) throws Exception {
         OWLObjectProperty property = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+prop));
         OWLClass r = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+range));
         OWLObjectPropertyRangeAxiom axiom = Init.getFactory().getOWLObjectPropertyRangeAxiom(property,r);

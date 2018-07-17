@@ -102,20 +102,20 @@ public class OntologyService {
     }
 
     public void addVersionInfo(OntoVersion version) throws OWLOntologyStorageException {
-        OWLAnnotationProperty property = Init.getFactory().getOWLVersionInfo();
+//        OWLAnnotationProperty property = Init.getFactory().getOWLVersionInfo();
+//
+//        Set<OWLAnnotation> annotations = Init.getOntology().getAnnotations();
+//        for(OWLAnnotation a:annotations){
+//            if(a.getProperty().equals(property)){
+//                OWLOntologyChange owlOntologyChange =new RemoveOntologyAnnotation(Init.getOntology(),a);
+//                Init.getManager().applyChange(owlOntologyChange);
+//                break;
+//            }
+//        }
+//        OWLAnnotation annotation = Init.getFactory().getOWLAnnotation( property, Init.getFactory().getOWLLiteral("v"+version.getMainVersion()+"."+version.getSubVersion()+"."+version.getChangeVersion()));
 
-        Set<OWLAnnotation> annotations = Init.getOntology().getAnnotations();
-        for(OWLAnnotation a:annotations){
-            if(a.getProperty().equals(property)){
-                OWLOntologyChange owlOntologyChange =new RemoveOntologyAnnotation(Init.getOntology(),a);
-                Init.getManager().applyChange(owlOntologyChange);
-                break;
-            }
-        }
-        OWLAnnotation annotation = Init.getFactory().getOWLAnnotation( property, Init.getFactory().getOWLLiteral("v"+version.getMainVersion()+"."+version.getSubVersion()+"."+version.getChangeVersion()));
-
-        OWLOntologyChange owlOntologyChange =new AddOntologyAnnotation(Init.getOntology(),annotation);
-        Init.getManager().applyChange(owlOntologyChange);
+ //       OWLOntologyChange owlOntologyChange =new AddOntologyAnnotation(Init.getOntology(),annotation);
+ //       Init.getManager().applyChange(owlOntologyChange);
         OWLOntology o = Init.getOntology();
         IRI versionIRI=IRI.create(Variables.dIRI+version.getMainVersion()+"."+version.getSubVersion()+"."+version.getChangeVersion());
         SetOntologyID change=new SetOntologyID(o,

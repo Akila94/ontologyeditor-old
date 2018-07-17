@@ -10,6 +10,7 @@ import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.search.EntitySearcher;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 
@@ -18,6 +19,8 @@ import static hello.util.UtilMethods.searchTree;
 /**
  * Created by Lotus on 8/20/2017.
  */
+
+@Service
 public class DataPropertyService {
 
     private TreeNode objectPropertyTree = null;
@@ -55,20 +58,20 @@ public class DataPropertyService {
         }
     }
 
-    public String addDProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addDProperty(String p) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLDeclarationAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
 
-    public String addSubDProperty(String p, String pa) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addSubDProperty(String p, String pa) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+p));
         OWLDataProperty parent = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+pa));
         OWLSubDataPropertyOfAxiom sub = Init.getFactory().getOWLSubDataPropertyOfAxiom(property,parent);
         return UtilMethods.addAxiom(sub);
     }
 
-    public String removeDProperty(String p) throws OWLOntologyStorageException, OWLOntologyCreationException {
+    public String removeDProperty(String p) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+p));
         Set<OWLAxiom> toRemove = new HashSet<>();
         for (OWLAxiom select : Init.getOntology().getAxioms())
@@ -105,7 +108,7 @@ public class DataPropertyService {
 
         Init.getManager().removeAxioms(Init.getOntology(), toRemove);
         Init.getManager().saveOntology(Init.getOntology());
-        UtilMethods.checkConsistency(Init.getOntology());
+        UtilMethods.checkConsistency();
         return "Property Deleted";
     }
 
@@ -119,13 +122,13 @@ public class DataPropertyService {
         return properties;
     }
 
-    public String addFunctionalDProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addFunctionalDProperty(String p) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLFunctionalDataPropertyAxiom(property);
         return UtilMethods.addAxiom(declare);
     }
 
-    public String removeFunctionalDProperty(String p) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeFunctionalDProperty(String p) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+p));
         OWLAxiom declare = Init.getFactory().getOWLFunctionalDataPropertyAxiom(property);
         return UtilMethods.removeAxiom(declare);
@@ -161,14 +164,14 @@ public class DataPropertyService {
         return all;
     }
 
-    public String addDisDProperty(String prop,String dis) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addDisDProperty(String prop,String dis) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+prop));
         OWLDataProperty disP = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+dis));
         OWLDisjointDataPropertiesAxiom axiom = Init.getFactory().getOWLDisjointDataPropertiesAxiom(property,disP);
         return UtilMethods.addAxiom(axiom);
     }
 
-    public String removeDisDProperty(String prop,String dis) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeDisDProperty(String prop,String dis) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+prop));
         OWLDataProperty disP = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+dis));
         OWLDisjointDataPropertiesAxiom axiom = Init.getFactory().getOWLDisjointDataPropertiesAxiom(property,disP);
@@ -186,7 +189,7 @@ public class DataPropertyService {
         return domains;
     }
 
-    public String addDPDomain(String prop,String doamin) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addDPDomain(String prop,String doamin) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+prop));
         OWLClass d = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+doamin));
         OWLDataPropertyDomainAxiom axiom = Init.getFactory().getOWLDataPropertyDomainAxiom(property,d);
@@ -194,7 +197,7 @@ public class DataPropertyService {
         return UtilMethods.addAxiom(axiom);
     }
 
-    public String removeDPDomain(String prop,String doamin) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeDPDomain(String prop,String doamin) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+prop));
         OWLClass d = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+doamin));
         OWLDataPropertyDomainAxiom axiom = Init.getFactory().getOWLDataPropertyDomainAxiom(property,d);
@@ -213,14 +216,14 @@ public class DataPropertyService {
         return ranges;
     }
 
-    public String addDPRange(String prop,String range) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String addDPRange(String prop,String range) throws Exception {
         OWLDataProperty property = Init.getFactory().getOWLDataProperty(IRI.create(Variables.baseIRI+prop));
         OWLDatatype r = Init.getFactory().getOWLDatatype(IRI.create(Variables.baseIRI+range));
         OWLDataPropertyRangeAxiom axiom = Init.getFactory().getOWLDataPropertyRangeAxiom(property,r);
         return UtilMethods.addAxiom(axiom);
     }
 
-    public String removeDPRange(String prop,String range) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public String removeDPRange(String prop,String range) throws Exception {
         String mRange=null;
         if(range.equals("Literal")){
             mRange="rdfs:Literal";

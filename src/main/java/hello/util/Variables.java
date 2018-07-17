@@ -20,7 +20,7 @@ public class Variables {
 
 
      public static String ontoPath;
-     public static final String baseOntoPath = "C:\\Users\\Lotus\\Desktop\\Research\\ResearchX\\sln_onto\\SLN_Ontology_";
+     public static final String baseOntoPath = "C:\\Users\\Lotus\\Desktop\\ontologyStore\\SLN_Ontology_";
 
     /**  reasoner  **/
 

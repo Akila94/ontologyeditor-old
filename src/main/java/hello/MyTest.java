@@ -2,30 +2,38 @@ package hello;
 
 import com.clarkparsia.owlapi.explanation.DefaultExplanationGenerator;
 import com.clarkparsia.owlapi.explanation.util.SilentExplanationProgressMonitor;
+import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.google.common.base.Optional;
+import com.hp.hpl.jena.ontology.OntModel;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
 import hello.bean.mode.OntoVersion;
 import hello.util.Init;
 import hello.util.UtilMethods;
 import hello.util.Variables;
 import jdk.nashorn.internal.runtime.ParserException;
+import org.mindswap.pellet.jena.PelletInfGraph;
+import org.mindswap.pellet.jena.PelletReasonerFactory;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.dlsyntax.renderer.DLSyntaxObjectRenderer;
 import org.semanticweb.owlapi.expression.OWLEntityChecker;
 import org.semanticweb.owlapi.expression.ShortFormEntityChecker;
 import org.semanticweb.owlapi.io.OWLObjectRenderer;
+import org.semanticweb.owlapi.manchestersyntax.renderer.ManchesterOWLSyntaxOWLObjectRendererImpl;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.Node;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.semanticweb.owlapi.reasoner.OWLReasonerFactory;
 import org.semanticweb.owlapi.reasoner.structural.StructuralReasonerFactory;
-import org.semanticweb.owlapi.util.BidirectionalShortFormProviderAdapter;
-import org.semanticweb.owlapi.util.OWLEntityRenamer;
-import org.semanticweb.owlapi.util.SimpleShortFormProvider;
+import org.semanticweb.owlapi.search.EntitySearcher;
+import org.semanticweb.owlapi.util.*;
 import org.semanticweb.owlapi.util.mansyntax.ManchesterOWLSyntaxParser;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationOrderer;
 import uk.ac.manchester.cs.owl.explanation.ordering.ExplanationTree;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -42,21 +50,73 @@ public class MyTest {
     private static OWLDataFactory dataFactory;
 
     public static void main(String[] args) throws OWLException, IOException {
+
         manager = OWLManager.createOWLOntologyManager();
-        UtilMethods utils = new UtilMethods();
-        ontology = utils.loadOntology(manager,Variables.baseIRI);
-        owlReasonerFactory = new StructuralReasonerFactory();
-        dataFactory = OWLManager.getOWLDataFactory();
-        reasoner = owlReasonerFactory.createNonBufferingReasoner(ontology);
+    //   UtilMethods utils = new UtilMethods();
+        ontology = manager.loadOntologyFromOntologyDocument(new File("C:\\\\Users\\\\Lotus\\\\Desktop\\\\ontologyStore\\\\SLN_Ontology.owl"));
+//        owlReasonerFactory = new StructuralReasonerFactory();
+//        dataFactory = OWLManager.getOWLDataFactory();
+//        reasoner = owlReasonerFactory.createNonBufferingReasoner(ontology);
         System.out.println("-----------------Test running-----------------");
        // System.out.println( isFunctional("hasApplicationMethodForControlMethodEvent"));
-        Set<OWLObjectProperty> propertySet = Init.getOntology().getObjectPropertiesInSignature();
-        System.out.println(propertySet);
+//        Set<OWLObjectProperty> propertySet = Init.getOntology().getObjectPropertiesInSignature();
+//        System.out.println(propertySet);
+//
+//        OntoVersion ontoVersion= new OntoVersion();
+//        ontoVersion.setMainVersion(1);
+//        ontoVersion.setSubVersion(1);
+//        ontoVersion.setChangeVersion(0);
 
-        OntoVersion ontoVersion= new OntoVersion();
-        ontoVersion.setMainVersion(1);
-        ontoVersion.setSubVersion(1);
-        ontoVersion.setChangeVersion(0);
+
+
+        OWLDataFactory df = OWLManager.getOWLDataFactory();
+//        Provider shortFormProvider = new Provider();
+//
+//        OWLEntityChecker entityChecker = new ShortFormEntityChecker(shortFormProvider);
+//        shortFormProvider.add(df.getOWLClass(IRI.create("http://example.org/Arm")));
+//        shortFormProvider.add(df.getOWLClass(IRI.create("http://example.org/Finger")));
+//        shortFormProvider.add(df.getOWLObjectProperty(IRI.create("http://example.org/hasPart")));
+//        String input = "Arm subClassOf (hasPart some Finger)";
+//        ManchesterOWLSyntaxParser parser = OWLManager.createManchesterParser();
+//        parser.setOWLEntityChecker(entityChecker);
+//        parser.setStringToParse(input);
+//        OWLAxiom axiom = parser.parseAxiom();
+//        System.out.println("CheckManchesterSyntax.main() " + axiom);
+
+
+        OWLClass cls = ontology.getOWLOntologyManager().getOWLDataFactory().getOWLClass(IRI.create(Variables.baseIRI+"LandPreparation"));
+//        Set<OWLClass> clzes = ontology.getClassesInSignature();
+//        clzes.stream().forEach(x-> System.out.println(x));
+//        clzes.stream().forEach(x-> System.out.println(EntitySearcher.getAnnotations(x.getIRI(), ontology).getClass()));
+//        System.out.println(EntitySearcher.getEquivalentClasses(cls,ontology));
+//        System.out.println(EntitySearcher.getSuperClasses(cls,ontology));
+
+        Set<OWLAnnotation> annotations = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(cls.getIRI(), ontology);
+        OWLAnnotation toRemove = annotations.stream().filter(a->a.getValue().toString().equals("\"Includes Land Preparation information and methods.\"")).findFirst().get();
+        System.out.println(toRemove);
+        System.out.println(annotations);
+        ontology.getOWLOntologyManager().applyChange(new RemoveAxiom(ontology,ontology.getOWLOntologyManager().getOWLDataFactory().getOWLAnnotationAssertionAxiom(cls.getIRI(), toRemove)));
+        OWLOntologyChange owlOntologyChange =new RemoveOntologyAnnotation(ontology,toRemove);
+      //  ontology.getOWLOntologyManager().applyChange(owlOntologyChange);
+        ontology.getOWLOntologyManager().saveOntology(ontology);
+        Set<OWLAnnotation> annotationse = (Set<OWLAnnotation>) EntitySearcher.getAnnotations(cls.getIRI(), ontology);
+        annotationse.forEach(a-> System.out.println("new "+a));
+
+
+//OWLAxiom axiom = ontology.getOWLOntologyManager().getOWLDataFactory().getOWLDeclarationAxiom(ontology.getOWLOntologyManager().getOWLDataFactory().getOWLEntity(EntityType.CLASS,IRI.create(Variables.baseIRI+"Quantity")));
+//        System.out.println(manchesterExplainer(axiom).replace(": "," "));
+//
+//        parser(manchesterExplainer(axiom).replace(": "," "));
+    }
+
+    static class Provider extends CachingBidirectionalShortFormProvider {
+
+        private SimpleShortFormProvider provider = new SimpleShortFormProvider();
+
+        @Override
+        protected String generateShortForm(OWLEntity entity) {
+            return provider.getShortForm(entity);
+        }
     }
 
     private static void printClasses(Set<OWLClass> classes) {
@@ -72,6 +132,11 @@ public class MyTest {
 
     }
 
+    public static String manchesterExplainer(OWLAxiom axiomToExplain) {
+        OWLObjectRenderer renderer = new ManchesterOWLSyntaxOWLObjectRendererImpl();
+        return renderer.render(axiomToExplain);
+
+    }
     private static void printAxioms(Set<OWLAxiom> axioms) {
 
         Set<OWLAxiom> axIndividual = new HashSet<OWLAxiom>();
@@ -125,11 +190,10 @@ public class MyTest {
     }
 
     private static void renameURI(OWLEntity entityToRename, IRI newNameIRI, OWLOntologyManager mngr) throws OWLOntologyStorageException {
+
         if (!mngr.contains(newNameIRI)) {
             OWLEntityRenamer owlEntityRenamer = new OWLEntityRenamer(mngr, mngr.getOntologies());
-            if (newNameIRI == null) {
-                return;
-            }
+
             final List<OWLOntologyChange> changes;
             changes = owlEntityRenamer.changeIRI(entityToRename.getIRI(), newNameIRI);
             for (OWLOntologyChange ch : changes) {
@@ -191,5 +255,48 @@ public class MyTest {
         OWLClassExpression axiom=parser.parseClassExpression();
         System.out.println(axiom);
         // return parser.parseClassExpression();
+    }
+
+    public void ClassTree( String ontology ) throws Exception {
+        // create a reasoner
+        OntModel model = ModelFactory.createOntologyModel( PelletReasonerFactory.THE_SPEC );
+
+        // create a model for the ontology
+        System.out.print( "Reading..." );
+        model.read( ontology );
+        System.out.println( "done" );
+
+        // load the model to the reasoner
+        System.out.print( "Preparing..." );
+        model.prepare();
+        System.out.println( "done" );
+
+        // compute the classification tree
+        System.out.print( "Classifying..." );
+        ((PelletInfGraph) model.getGraph()).getKB().classify();
+        System.out.println( "done" );
+    }
+
+    public static void runWithOWLAPI(PelletReasoner reasoner) throws Exception {
+        manager.addOntologyChangeListener( reasoner );
+
+        // perform initial consistency check
+        long s = System.currentTimeMillis();
+        boolean consistent = reasoner.isConsistent();
+        long e = System.currentTimeMillis();
+        System.out.println( "Consistent? " + consistent + " (" + (e - s) + "ms)" );
+
+
+    }
+
+    public static void parser(String axiomString){
+        OWLEntityChecker entityChecker = new ShortFormEntityChecker(
+                new BidirectionalShortFormProviderAdapter(
+                        manager, ontology.getImportsClosure(),new SimpleShortFormProvider()));
+        ManchesterOWLSyntaxParser parser = OWLManager.createManchesterParser();
+        parser.setOWLEntityChecker(entityChecker);
+        parser.setStringToParse(axiomString);
+        OWLAxiom axiom=parser.parseAxiom();
+        System.out.println(axiom);
     }
 }

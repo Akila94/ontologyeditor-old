@@ -31,13 +31,11 @@ public class Init {
             UtilMethods untiles = new UtilMethods();
             if (ontology == null) {
                 ontology = untiles.loadOntology(manager, Variables.ontoPath);
+                pelletReasoner = PelletReasonerFactory.getInstance().createNonBufferingReasoner( ontology );
+                manager.addOntologyChangeListener( pelletReasoner );
             }
             if (owlReasonerFactory == null) {
                 owlReasonerFactory = new StructuralReasonerFactory();
-            }
-            if (pelletReasoner == null) {
-               pelletReasoner = PelletReasonerFactory.getInstance().createNonBufferingReasoner( ontology );
-               manager.addOntologyChangeListener( pelletReasoner );
             }
         } catch (OWLOntologyCreationException e) {
             e.printStackTrace();

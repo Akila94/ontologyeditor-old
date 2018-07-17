@@ -94,31 +94,13 @@ public class UtilMethods {
         return res;
     }
 
-    public static String checkConsistency(OWLOntology ontology) throws OWLOntologyCreationException {
+    public static String checkConsistency() throws Exception {
+        Init.getOntology().getOWLOntologyManager().addOntologyChangeListener(Init.getPelletReasoner());
+        boolean consistent = Init.getPelletReasoner().isConsistent();
 
-        String answer;
 
-        Init.getPelletReasoner().refresh();
-        if (Init.getPelletReasoner().isConsistent()) {
-            if (Init.getPelletReasoner().getUnsatisfiableClasses().getEntitiesMinusBottom().size() > 0) {
-                StringBuilder builder = new StringBuilder();
-                Set<OWLClass> clzes = Init.getReasoner().getUnsatisfiableClasses().getEntitiesMinusBottom();
-                for (OWLClass s : clzes) {
-                    builder.append(s.getIRI().getShortForm() + ", ");
-                }
-                answer = "Merged ontology FAILED the consistency test, Unsatisfiable classes detected: " + builder.toString();
-                consistent = 0;
-            } else {
-                answer = "Merged ontology PASSED the consistency test ";
-                consistent = 1;
-            }
-        } else {
-            answer = "Merged ontology FAILED the consistency test";
-            consistent = 0;
-        }
+        return consistent?"Passed Consistency Validation":"Lost the Consistency change did not saved";
 
-        Init.getPelletReasoner().flush();
-        return (answer);
 
     }
 
@@ -172,11 +154,11 @@ public class UtilMethods {
 
     }
 
-    public static String removeAxiom(OWLAxiom axiom) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public static String removeAxiom(OWLAxiom axiom) throws Exception {
 
         RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(), axiom);
         Init.getManager().applyChange(removeAxiom);
-        String reason = checkConsistency(Init.getOntology());
+        String reason = checkConsistency();
         if (consistent == 0) {
             AddAxiom addAxiom = new AddAxiom(Init.getOntology(), axiom);
             Init.getManager().applyChange(addAxiom);
@@ -195,13 +177,16 @@ public class UtilMethods {
         return reason;
     }
 
-    public static String addAxiom(OWLAxiom axiom) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        System.out.println("add come");
+    public static String addAxiom(OWLAxiom axiom) throws Exception {
+
+
         AddAxiom addAxiom = new AddAxiom(Init.getOntology(), axiom);
         Init.getManager().applyChange(addAxiom);
-        System.out.println("add applied");
-        String reason = checkConsistency(Init.getOntology());
-        System.out.println("add checked");
+        long startTime = System.currentTimeMillis();
+        String reason = checkConsistency();
+        long stopTime = System.currentTimeMillis();
+        long elapsedTime = stopTime - startTime;
+        System.out.println(elapsedTime);
         if (consistent == 0) {
             RemoveAxiom removeAxiom = new RemoveAxiom(Init.getOntology(), axiom);
             Init.getManager().applyChange(removeAxiom);
@@ -216,9 +201,8 @@ public class UtilMethods {
             changeQueue.add(changeKeeper);
 
         }
-        System.out.println("add save");
+
         Init.getManager().saveOntology(Init.getOntology());
-        System.out.println("add out");
         return reason;
     }
 }

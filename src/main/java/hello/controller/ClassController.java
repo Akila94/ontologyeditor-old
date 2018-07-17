@@ -34,19 +34,57 @@ public class ClassController {
     private static final Set<String> PATTERN_TYPES = ImmutableSet.of("o1", "o2", "o3", "o4", "o6");
 
 
-    @Autowired
-    DBService dbService;
+    private final DBService dbService;
+    private final ClassService classService;
 
     List<ClassAxiom> subClasses;
     List<ClassAxiom> eqClasses;
     private String currentClass;
 
+    @Autowired
+    public ClassController(DBService dbService, ClassService classService) {
+        this.dbService = dbService;
+        this.classService = classService;
+    }
+
+    @RequestMapping(value = "/classDetail/{claz}", method = RequestMethod.GET)
+    public String viewClass( @PathVariable String claz, Model model,HttpSession session) throws OWLException, JsonProcessingException {
+
+        if(Variables.version==null){
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
+            Variables.version = dbService.getUserCurrentVersion(user.getUsername());
+            Variables.ontoPath=Variables.version.getLocation();
+            session.setAttribute("versionSet",true);
+        }
+
+        session.setAttribute("currentClass",claz);
+
+
+
+        OWLClass clz  = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+claz));
+        subClasses = classService.getSubClassOfAxioms(clz);
+        eqClasses = classService.getEquivalentClassAxioms(clz);
+        model.addAttribute("subClasses",subClasses);
+        model.addAttribute("tree", classService.getClassTree(false));
+        model.addAttribute("module", "view");
+        model.addAttribute("eqClasses",eqClasses);
+        model.addAttribute("djClasses", classService.getDisjointAxioms(clz));
+        model.addAttribute("domainOf", classService.getDomainOf(clz));
+        model.addAttribute("rangeOf", classService.getRangeOf(clz));
+        model.addAttribute("toDelete",new ClassAxiom());
+        model.addAttribute("pattern",new Pattern());
+        model.addAttribute("undo",!UtilMethods.changeQueue.isEmpty());
+
+        return "classDetail";
+    }
+
 
 
     @PostMapping("/addNewClass")
-    public ResponseEntity<?> addClass(@ModelAttribute Pattern pattern, Errors errors, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addClass(@ModelAttribute Pattern pattern,  HttpSession session) throws Exception {
 
-        ClassService classService = new ClassService();
+       
         String result;
 
         if(pattern.getClassList().get(0).equals("Thing")){
@@ -56,16 +94,16 @@ public class ClassController {
             result = classService.addClassAxiom(pattern,0);
         }
 
-
+        classService.getClassTree(true);
         updateVersion(session,pattern,dbService,"currentClass");
         return ResponseEntity.ok(result);
     }
     @RequestMapping(value = "/removeClass", method = RequestMethod.GET)
-    public ResponseEntity<?> removeClass(@ModelAttribute Pattern pattern, HttpSession session) throws OWLException, JsonProcessingException {
+    public ResponseEntity<?> removeClass(@ModelAttribute Pattern pattern, HttpSession session) throws Exception {
         createVersion(dbService);
 
         String toDeleteClass = (String) session.getAttribute("currentClass");
-        ClassService classService = new ClassService();
+       
         OWLClass clz  = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+toDeleteClass));
         String result = classService.deleteClass(clz);
 
@@ -76,20 +114,20 @@ public class ClassController {
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
             dbService.removeClass(toDeleteClass, user.getUsername(), pattern.getDescription(), Variables.version.getId());
         }
-
+        classService.getClassTree(true);
         return  ResponseEntity.ok(result);
     }
 
 
     @RequestMapping(value = "/range/{name}", method = RequestMethod.GET)
     public ResponseEntity<?> getRanges( @PathVariable String name, Model model) throws OWLException, JsonProcessingException {
-        ClassService classService = new ClassService();
+       
         OWLObjectProperty p = Init.getFactory().getOWLObjectProperty(IRI.create(Variables.baseIRI+name));
         return  ResponseEntity.ok(classService.getRange(p));
     }
 
     @RequestMapping(value = "/undo", method = RequestMethod.GET)
-    public ResponseEntity<?> getRanges(Model model) throws OWLException, JsonProcessingException {
+    public ResponseEntity<?> undo(Model model) throws OWLException, JsonProcessingException {
         ChangeKeeper changes= UtilMethods.changeQueue.get(UtilMethods.changeQueue.size()-1);
         List<OWLAxiomChange> cq = changes.getChangeQueue();
         for(OWLAxiomChange c:cq){
@@ -105,7 +143,7 @@ public class ClassController {
 
     @RequestMapping(value = "/getNonDisjoint/{claz}", method = RequestMethod.GET)
     public ResponseEntity<?> getNonDisjoints(@PathVariable String claz){
-        ClassService classService = new ClassService();
+       
         OWLClass clz  = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+claz));
         List<String> disjoints = classService.getDisjointAxioms(clz);
         List<String> nonDis = classService.getAllClasses();
@@ -114,44 +152,11 @@ public class ClassController {
         return  ResponseEntity.ok(nonDis);
     }
 
-    @RequestMapping(value = "/classDetail/{claz}", method = RequestMethod.GET)
-    public String viewClass( @PathVariable String claz, Model model,HttpSession session) throws OWLException, JsonProcessingException {
 
-        if(Variables.version==null){
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
-            Variables.version = dbService.getUserCurrentVersion(user.getUsername());
-            Variables.ontoPath=Variables.version.getLocation();
-            session.setAttribute("versionSet",true);
-        }
-
-        session.setAttribute("currentClass",claz);
-        TreeNode tree = new ClassService().printHierarchy(Init.getManager().getOWLDataFactory().getOWLThing());
-        ObjectMapper mapper = new ObjectMapper();
-
-        ClassService classService = new ClassService();
-        OWLClass clz  = Init.getFactory().getOWLClass(IRI.create(Variables.baseIRI+claz));
-        subClasses = classService.getSubClassOfAxioms(clz);
-        eqClasses = classService.getEquivalentClassAxioms(clz);
-        model.addAttribute("subClasses",subClasses);
-        String jsonInString = mapper.writeValueAsString(tree);
-        tree=null;
-        model.addAttribute("tree", jsonInString);
-        model.addAttribute("module", "view");
-        model.addAttribute("eqClasses",eqClasses);
-        model.addAttribute("djClasses", classService.getDisjointAxioms(clz));
-        model.addAttribute("domainOf", classService.getDomainOf(clz));
-        model.addAttribute("rangeOf", classService.getRangeOf(clz));
-        model.addAttribute("toDelete",new ClassAxiom());
-        model.addAttribute("pattern",new Pattern());
-        model.addAttribute("undo",!UtilMethods.changeQueue.isEmpty());
-
-        return "classDetail";
-    }
 
     @RequestMapping(value = "/getClassList", method = RequestMethod.GET)
     public ResponseEntity<?> getClassList(){
-        return  ResponseEntity.ok(new ClassService().getAllClasses());
+        return  ResponseEntity.ok(classService.getAllClasses());
     }
 
     @RequestMapping(value = "/getDataProperties", method = RequestMethod.GET)
@@ -160,11 +165,11 @@ public class ClassController {
     }
     @RequestMapping(value = "/getInstances", method = RequestMethod.GET)
     public ResponseEntity<?> getInstances(){
-        return  ResponseEntity.ok(new ClassService().getAllIndividuals());
+        return  ResponseEntity.ok(classService.getAllIndividuals());
     }
     @RequestMapping(value = "/getDomainOfProperties", method = RequestMethod.GET)
     public ResponseEntity<?> getDomainOfProperties(){
-        ClassService classService = new ClassService();
+       
         List<String> domainOfProps = new ArrayList<>();
         domainOfProps.addAll(new ObjectPropertyService().getAllOProperties());
         domainOfProps.addAll(new DataPropertyService().getAllDProperties());
@@ -172,9 +177,9 @@ public class ClassController {
     }
 
     @PostMapping("/addDisjoint")
-    public ResponseEntity<?> addDisjointClass(@ModelAttribute Pattern pattern,Errors errors) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addDisjointClass(@ModelAttribute Pattern pattern,Errors errors) throws Exception {
 
-        ClassService classService =new ClassService();
+        
         classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),1);
         if(UtilMethods.consistent==1) {
             classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),0);
@@ -190,17 +195,17 @@ public class ClassController {
     }
 
     @GetMapping("/removeDisjointAxiom/{clz}")
-    public ResponseEntity<?> removeDisjoint(@PathVariable String clz, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
-        ClassService classService =new ClassService();
+    public ResponseEntity<?> removeDisjoint(@PathVariable String clz, @ModelAttribute Pattern pattern, HttpSession session) throws Exception {
+        
         String result = classService.addOrRemoveDisjointClass((String) session.getAttribute("currentClass"),clz,0);
 
         updateVersion(session,pattern,dbService,"currentClass");
         return ResponseEntity.ok(result);
     }
     @PostMapping("/addDomainOf")
-    public ResponseEntity<?> addDomainOf(@ModelAttribute Pattern pattern,Errors errors,HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addDomainOf(@ModelAttribute Pattern pattern,Errors errors,HttpSession session) throws Exception {
 
-        ClassService classService =new ClassService();
+        
         String result = classService.addOrRemoveDomainOf(pattern.getCurrentClass(),pattern.getoProperties().get(0),1);
 
         updateVersion(session,pattern,dbService,"currentClass");
@@ -209,9 +214,9 @@ public class ClassController {
     }
 
     @GetMapping("/removeDomainOf/{property}")
-    public ResponseEntity<?> removeDomainOf(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> removeDomainOf(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws Exception {
 
-        ClassService classService =new ClassService();
+        
         classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),0);
         if(UtilMethods.consistent==1) {
             classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),1);
@@ -229,9 +234,9 @@ public class ClassController {
         return ResponseEntity.ok(result);
     }
     @GetMapping("/removeRangeOf/{property}")
-    public ResponseEntity<?> removeRangeOf(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> removeRangeOf(@PathVariable String property, @ModelAttribute Pattern pattern, HttpSession session) throws Exception {
 
-        ClassService classService =new ClassService();
+        
         classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),0);
         if(UtilMethods.consistent==1) {
             classService.addOrRemoveDisjointClass(pattern.getCurrentClass(),pattern.getClassList().get(0),1);
@@ -250,9 +255,9 @@ public class ClassController {
         return ResponseEntity.ok(result);
     }
     @PostMapping("/addRangeOf")
-    public ResponseEntity<?> addRangeOf(@ModelAttribute Pattern pattern, Errors errors,HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addRangeOf(@ModelAttribute Pattern pattern, Errors errors,HttpSession session) throws Exception {
 
-        ClassService classService =new ClassService();
+        
         String result = classService.addOrRemoveRangeOf(pattern.getCurrentClass(),pattern.getoProperties().get(0),Variables.version.getId());
 
         updateVersion(session,pattern,dbService,"currentClass");
@@ -262,7 +267,7 @@ public class ClassController {
 
 
     @GetMapping("/removeSubClassOfAxiom/{id}")
-    public ResponseEntity<?> removeSubClassAxiom(@PathVariable int id,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> removeSubClassAxiom(@PathVariable int id,@ModelAttribute Pattern pattern, HttpSession session) throws Exception {
 
         createVersion(dbService);
 
@@ -279,11 +284,11 @@ public class ClassController {
         dbService.removeAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),Variables.version.getId());
 
 
-
+        classService.getClassTree(true);
         return ResponseEntity.ok(result);
     }
     @GetMapping("/removeEqClassOfAxiom/{id}")
-    public ResponseEntity<?> removeEqClassAxiom(@PathVariable int id,@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> removeEqClassAxiom(@PathVariable int id,@ModelAttribute Pattern pattern, HttpSession session) throws Exception {
 
         createVersion(dbService);
 
@@ -303,10 +308,10 @@ public class ClassController {
     }
 
     @GetMapping("/addSubClassAxiom")
-    public ResponseEntity<?> addSubClassAxioms(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addSubClassAxioms(@ModelAttribute Pattern pattern, HttpSession session) throws Exception {
         System.out.println("come");
         pattern.setCurrentClass((String) session.getAttribute("currentClass"));
-        ClassService classService=new ClassService();
+       
         if(PATTERN_TYPES.contains(pattern.getPatternType()) || (pattern.getPatternType().equals("o7") &&pattern
                 .getCardinalityType().equals("min"))){
 
@@ -327,17 +332,18 @@ public class ClassController {
             org.springframework.security.core.userdetails.User user = (User) auth.getPrincipal();
             dbService.addAxiom((String) session.getAttribute("currentClass"),user.getUsername(),pattern.getDescription(),Variables.version.getId());
         }
+        classService.getClassTree(true);
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/addEqClassAxiom")
-    public ResponseEntity<?> addEqClassAxioms(@ModelAttribute Pattern pattern, HttpSession session) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public ResponseEntity<?> addEqClassAxioms(@ModelAttribute Pattern pattern, HttpSession session) throws Exception {
 
         if(PATTERN_TYPES.contains(pattern.getPatternType()) || (pattern.getPatternType().equals("o7") &&pattern
                 .getCardinalityType().equals("min"))){
             updateVersion(session,pattern,dbService,"currentClass");
         } else{
-            new ClassService().addClassAxiom(pattern,1);
+            classService.addClassAxiom(pattern,1);
             if(UtilMethods.consistent==1){
                 UtilMethods.removeAxiom(UtilMethods.axiomsQueue.get(0));
                 createVersion(dbService);
@@ -346,7 +352,7 @@ public class ClassController {
 
 
         pattern.setCurrentClass((String) session.getAttribute("currentClass"));
-        String result = new ClassService().addClassAxiom(pattern,1);
+        String result =classService.addClassAxiom(pattern,1);
         updateVersion(session,pattern,dbService,"currentClass");
 
 
@@ -368,16 +374,15 @@ public class ClassController {
 
     }
 
-    public void createVersion(DBService dbServ) throws OWLOntologyCreationException, OWLOntologyStorageException {
+    public void createVersion(DBService dbServ) throws Exception {
         int maxV = dbServ.getMaxVersionNumber();
         Variables.ontoPath = Variables.baseOntoPath+(maxV+1)+".0.0.owl";
         UtilMethods.renameFile(Variables.version.getLocation(),Variables.ontoPath);
-        OWLOntology preOnto = Init.getOntology();
         Init.getManager().removeOntology(Init.getOntology());
         Init.setOntology(new UtilMethods().loadOntology(Init.getManager(),Variables.ontoPath));
         OntologyService ontologyService = new OntologyService();
-        ontologyService.addPriorVersion(Variables.version);
-        ontologyService.addBackwardInCompatibleWith(preOnto);
+       // ontologyService.addPriorVersion(Variables.version);
+       // ontologyService.addBackwardInCompatibleWith(preOnto);
         if(Variables.version.getCurrent()){
             dbServ.setInactiveVersion(Variables.version.getId());
             Variables.version = dbServ.addVersion(maxV+1,0,0,Variables.ontoPath,"sln_onto",Variables.version.getId(),true);
